@@ -4,11 +4,11 @@ use crate::grid::{
     Cell::{LetterBonus, WordBonus},
     Grid,
 };
-use crate::tilesets::{TileSet, Language};
+use crate::tilesets::{Language, TileSet};
 use crate::wordlist::{LetterSet, Row, RowData, Word, Wordlist};
+use crate::Error;
 use crate::{Letters, Tile, Tiles};
 
-use anyhow::Result;
 #[cfg(feature = "flame_it")]
 use flamer::flame;
 #[cfg(feature = "rayon")]
@@ -79,6 +79,7 @@ impl<'a> Board<'a> {
     /// - [`with_wordlist_from_file`](Board::with_wordlist_from_file)
     /// - [`with_wordlist_from_words`](Board::with_wordlist_from_words)
     /// - [`with_state_from_strings`](Board::with_state_from_strings)
+    /// - [`with_grid_from_strings`](Board::with_grid_from_strings)
     #[must_use]
     pub fn new(language: Language) -> Board<'a> {
         let grid = grid::default();
@@ -88,7 +89,7 @@ impl<'a> Board<'a> {
             empty_rowdata.push((LetterSet::new(), false));
         }
         let tileset = TileSet::new(language);
-        let wordlist = Wordlist::from_words(&[], tileset.codec());
+        let wordlist = Wordlist::from_words(&[], tileset.codec()).unwrap();
         Board {
             board: grid,
             empty_row,
@@ -113,23 +114,24 @@ impl<'a> Board<'a> {
     /// let board = Board::default().with_wordlist_from_file("wordlists/words.txt")?;
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    pub fn with_wordlist_from_file(mut self, wordfile: &str) -> Result<Board<'a>> {
+    pub fn with_wordlist_from_file(mut self, wordfile: &str) -> Result<Board<'a>, Error> {
         self.wordlist = Wordlist::from_file(wordfile, self.codec())?;
         self.set_rowdata();
         Ok(self)
     }
 
     /// Specify the wordlist by a list of words, and returns the modified board.
-    ///
+    /// ## Errors
+    /// If the words can not be encoded.
     /// ## Example
     /// ```no_run
     /// use wordfeud_solver::Board;
     /// let board = Board::default().with_wordlist_from_words(&["aardvark", "zebra"]);
     ///```
-    pub fn with_wordlist_from_words(mut self, words: &[&str]) -> Board<'a> {
-        self.wordlist = Wordlist::from_words(words, self.codec());
+    pub fn with_wordlist_from_words(mut self, words: &[&str]) -> Result<Board<'a>, Error> {
+        self.wordlist = Wordlist::from_words(words, self.codec())?;
         self.set_rowdata();
-        self
+        Ok(self)
     }
 
     #[cfg(feature = "bincode")]
@@ -139,7 +141,7 @@ impl<'a> Board<'a> {
     ///
     /// ## Errors
     /// This function will give an error if the `wordfile` does not exist, or cannot be decoded.
-    pub fn with_wordlist_deserialize_from(mut self, wordfile: &str) -> Result<Board<'a>> {
+    pub fn with_wordlist_deserialize_from(mut self, wordfile: &str) -> Result<Board<'a>, Error> {
         self.wordlist = Wordlist::deserialize_from(wordfile)?;
         self.set_rowdata();
         Ok(self)
@@ -147,7 +149,7 @@ impl<'a> Board<'a> {
 
     /// Parse board state from a list of strings.
     /// The list must contain 15 rows of 15 characters.
-    /// ## Panics
+    /// ## Errors
     /// If the list of strings has wrong dimensions or cannot be parsed as rows.
     ///
     /// ## Examples
@@ -172,14 +174,19 @@ impl<'a> Board<'a> {
     /// ];
     /// let board = Board::default().with_state_from_strings(state);
     /// ```
-    pub fn with_state_from_strings(mut self, rows: &[&str]) -> Board<'a> {
+    pub fn with_state_from_strings(mut self, rows: &[&str]) -> Result<Board<'a>, Error> {
+        if rows.len() != N {
+            return Err(Error::InvalidRowCount(rows.len()));
+        }
         let mut state = [Row::new(); N];
         for (i, &row) in rows.iter().enumerate() {
-            assert_eq!(row.len(), N);
-            state[i] = Row::try_from(row).unwrap();
+            if row.len() != N {
+                return Err(Error::InvalidRowLength(row.len()));
+            }
+            state[i] = Row::try_from(row)?;
         }
         self.set_state(&state);
-        self
+        Ok(self)
     }
 
     /// Set board state from a list of rows, update rowdata
@@ -194,11 +201,11 @@ impl<'a> Board<'a> {
     }
 
     /// Set board cells from string representation
-    /// ## Panics
+    /// ## Errors
     /// If the grid has wrong dimensions or cannot be parsed as valid board cells.
-    pub fn with_grid_from_strings(mut self, grid: Vec<Vec<String>>) -> Board<'a> {
-        self.board = grid::from_array(&grid);
-        self
+    pub fn with_grid_from_strings(mut self, grid: Vec<Vec<String>>) -> Result<Board<'a>, Error> {
+        self.board = grid::from_array(&grid)?;
+        Ok(self)
     }
 
     /// Check if cell at x, y is occupied.
@@ -208,8 +215,9 @@ impl<'a> Board<'a> {
     /// ```
     /// use wordfeud_solver::Board;
     /// let mut board = Board::default();
-    /// board.play_word("aardvark", 7, 7, true, true);
+    /// board.play_word("aardvark", 7, 7, true, true)?;
     /// assert!(board.is_occupied(7,7));
+    /// # Ok::<(), anyhow::Error>(())
     pub fn is_occupied(&self, x: usize, y: usize) -> bool {
         self.vertical[x][y].is_some()
     }
@@ -248,16 +256,16 @@ impl<'a> Board<'a> {
     /// Letters in `word` that are already on the board are not included.
     /// <br>**NOTE**: if a letter in `word` is placed on the board in a position where
     /// a different letter is already used, the letter on the board is silently overwritten.
-    /// ## Panics
+    /// ## Errors
     /// - If `word` cannot be encoded to valid [`Tiles`](crate::tiles::Tiles).
     /// - If the placed `word` would cross the right or bottom boarder.
     /// ## Examples
     /// ```
     /// use wordfeud_solver::Board;
     /// let mut board = Board::default();
-    /// let used = board.play_word("aardvark", 7,7,true, true);
+    /// let used = board.play_word("aardvark", 7,7,true, true)?;
     /// assert_eq!(used, "aardvark");
-    ///
+    ///# Ok::<(), anyhow::Error>(())
     /// ```
     pub fn play_word(
         &mut self,
@@ -266,12 +274,21 @@ impl<'a> Board<'a> {
         y: usize,
         horizontal: bool,
         modify: bool,
-    ) -> String {
+    ) -> Result<String, Error> {
         let mut x = x;
         let mut y = y;
+        let len = word.len();
         let (dx, dy) = if horizontal { (1, 0) } else { (0, 1) };
+        if (x + len * dx > N) || (y + len * dy > N) {
+            return Err(Error::BoardIndexError {
+                x,
+                y,
+                horizontal,
+                len,
+            });
+        }
         let mut used_letters = Letters::new();
-        let word = Word::try_from(word).unwrap(); // TODO
+        let word = Word::try_from(word)?;
         for &letter in word.iter() {
             let c = self.horizontal[y][x];
             if c.is_none() {
@@ -284,7 +301,7 @@ impl<'a> Board<'a> {
             y += dy;
         }
         self.set_state(&self.horizontal.clone());
-        used_letters.to_string()
+        Ok(used_letters.to_string())
     }
 
     /// Returns the the surrounding characters that would need to form a valid
@@ -389,7 +406,7 @@ impl<'a> Board<'a> {
     /// ```
     /// # use std::convert::TryFrom;
     /// use wordfeud_solver::{Board, Letters, Row};
-    /// let board = Board::default().with_wordlist_from_words(&["the", "quick", "brown", "fox"]);
+    /// let board = Board::default().with_wordlist_from_words(&["the", "quick", "brown", "fox"]).unwrap();
     /// let row = Row::try_from("               ").unwrap();
     /// let letters = Letters::try_from("befnrowx").unwrap();
     /// let res = board.words(&row, true, 7, letters);
@@ -417,10 +434,11 @@ impl<'a> Board<'a> {
     /// ```
     /// # use std::convert::TryFrom;
     /// use wordfeud_solver::{Board, Letters, Row};
-    /// let board = Board::default().with_wordlist_from_words(&["the", "quick", "brown", "fox"]);
-    /// let letters = Letters::try_from("befnrowx").unwrap();
+    /// let board = Board::default().with_wordlist_from_words(&["the", "quick", "brown", "fox"])?;
+    /// let letters = Letters::try_from("befnrowx")?;
     /// let res = board.calc_all_word_scores(letters);
     /// assert_eq!(res.len(),16);
+    /// # Ok::<(), anyhow::Error>(())
     /// ```
     /// In this example 16 results are returned: 8 in horizontal and 8 in vertical direction.
     /// See also [`Board::words`](Board::words).
@@ -563,20 +581,21 @@ mod tests {
     }
 
     #[test]
-    fn test_state() {
-        let mut board = board_nl().with_state_from_strings(&TEST_STATE);
+    fn test_state() -> Result<()> {
+        let mut board = board_nl().with_state_from_strings(&TEST_STATE)?;
 
         assert!(board.is_occupied(4, 0));
         assert!(!board.is_occupied(0, 0));
         assert!(board.is_occupied(14, 4));
 
-        board.play_word("ster", 3, 0, true, true);
+        board.play_word("ster", 3, 0, true, true)?;
         assert_eq!(board.horizontal[0].to_string(), "   ster   c   f");
+        Ok(())
     }
 
     #[test]
-    fn test_surrounding_words() {
-        let board = board_nl().with_state_from_strings(&TEST_STATE);
+    fn test_surrounding_words() -> Result<()> {
+        let board = board_nl().with_state_from_strings(&TEST_STATE)?;
         let sw = board
             .surrounding_words(true, 8)
             .iter()
@@ -588,26 +607,28 @@ mod tests {
         ];
         println!("{:?}", expect);
         assert_eq!(sw, expect);
+        Ok(())
     }
 
     #[test]
-    fn test_calc_word_points() {
-        let board = board_nl().with_state_from_strings(&TEST_STATE);
-        let word = Word::try_from("ster").unwrap();
+    fn test_calc_word_points() -> Result<()> {
+        let board = board_nl().with_state_from_strings(&TEST_STATE)?;
+        let word = Word::try_from("ster")?;
         let points = board.calc_word_points(&word, 3, 0, true, true);
         assert_eq!(7, points);
-        let word = Word::try_from("abel").unwrap();
+        let word = Word::try_from("abel")?;
         let points = board.calc_word_points(&word, 3, 6, false, true);
         assert_eq!(32, points);
+        Ok(())
     }
 
     #[test]
-    fn test_words() {
+    fn test_words() -> Result<()> {
         let words = &["af", "ja"];
         let board = board_nl()
-            .with_wordlist_from_words(words)
-            .with_state_from_strings(&TEST_STATE);
-        let letters = Letters::try_from("j*").unwrap();
+            .with_wordlist_from_words(words)?
+            .with_state_from_strings(&TEST_STATE)?;
+        let letters = Letters::try_from("j*")?;
         let i = 0;
         let horizontal = true;
         println!("{:?}", board.rowdata[1][0]);
@@ -616,6 +637,7 @@ mod tests {
         for (x, word) in words {
             println!("{} {} {}", x, i, word); // [(13, Word(['A', 'f']))]
         }
+        Ok(())
     }
 
     #[test]
@@ -624,8 +646,8 @@ mod tests {
             "af", "ah", "al", "aar", "aas", "be", "bi", "bo", "bar", "bes", "bel",
         ];
         let board = board_nl()
-            .with_wordlist_from_words(words)
-            .with_state_from_strings(&TEST_STATE);
+            .with_wordlist_from_words(words)?
+            .with_state_from_strings(&TEST_STATE)?;
 
         let letters = Letters::try_from("abel")?;
         let res = board.calc_all_word_scores(letters);
@@ -658,7 +680,7 @@ mod tests {
 
     #[test]
     fn test_board() {
-        let board = board_nl().with_state_from_strings(&TEST_STATE);
+        let board = board_nl().with_state_from_strings(&TEST_STATE).unwrap();
         println!("{}", board);
     }
 
@@ -673,16 +695,15 @@ mod tests {
     }
 
     #[test]
-    fn test_main() {
-        use std::convert::TryFrom;
-
-        let mut board = board_nl().with_wordlist_from_words(&["rust", "rest"]);
+    fn test_main() -> Result<()> {
+        let mut board = board_nl().with_wordlist_from_words(&["rust", "rest"])?;
         let letters = Letters::try_from("rusta").unwrap();
         let results = board.calc_all_word_scores(letters);
         for (x, y, horizontal, word, score) in results {
             println!("{} {} {} {} {}", x, y, horizontal, word, score);
         }
-        board.play_word("rust", 7, 7, true, true);
+        board.play_word("rust", 7, 7, true, true)?;
         println!("{}", board);
+        Ok(())
     }
 }

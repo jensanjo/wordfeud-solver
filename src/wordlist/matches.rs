@@ -211,7 +211,7 @@ mod test {
     ];
 
     fn test_match_helper(letters: &str, row: &str, pos: usize, expected: &[&str]) -> Result<()> {
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default());
+        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
         let row = Row::try_from(row)?;
         let rowdata: RowData = wordlist.connected_row(&row);
         let letters = Letters::try_from(letters)?;
@@ -256,7 +256,7 @@ mod test {
     #[test]
     fn test_words() -> Result<()> {
         // Read some words in the wordlist and verify the word count and character set
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default());
+        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
         assert_eq!(wordlist.word_count, WORDS.len());
         let all_labels: Vec<u8> = wordlist.all_labels.iter().collect();
         assert_eq!(all_labels, vec![1, 2, 5, 6, 8, 9, 12, 15, 18, 19, 20]);
@@ -311,7 +311,7 @@ mod test {
 
     #[test]
     fn test_get_legal_characters() -> Result<()> {
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default());
+        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
         let word = Row::try_from(" ")?;
         let lc = wordlist.get_legal_characters(&word);
         assert_eq!(lc.to_string(), "abefhilorst");

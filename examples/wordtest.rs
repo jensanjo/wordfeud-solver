@@ -31,7 +31,7 @@ fn main() -> Result<()> {
     let board = Board::new(Language::NL)
         .with_wordlist_from_file("wordlists/wordlist-nl.txt")
         .unwrap();
-    let board = board.with_state_from_strings(&TEST_STATE);
+    let board = board.with_state_from_strings(&TEST_STATE)?;
     let dt = t0.elapsed();
     println!("Create board with wordlist took {:?}", dt);
     let letters = Letters::try_from("koetsje")?;

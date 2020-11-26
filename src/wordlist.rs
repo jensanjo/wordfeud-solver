@@ -5,7 +5,7 @@ use self::trievec::TrieVec;
 use crate::codec::Codec;
 use crate::labelset::{Label, LabelSet};
 pub use crate::tiles::{Row, Tiles};
-use anyhow::Result;
+use crate::Error;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
@@ -137,15 +137,15 @@ impl Wordlist {
     /// Read the wordlist from a file. The file must be encoded in utf-8 and
     /// have one word per line.
     /// ## Errors
-    /// Fails if the wordlist can not be read.
-    /// ### Panics
-    /// If a word can not be encoded with the given `codec`.
-    pub fn from_file(wordfile: &str, codec: &Codec) -> Result<Wordlist> {
+    /// Fails if the wordlist can not be read, or a word can not be encoded.
+    pub fn from_file(wordfile: &str, codec: &Codec) -> Result<Wordlist, Error> {
         let mut builder = TrieVec::new();
-        read_to_string(wordfile)?
+        read_to_string(wordfile)
+            .map_err(|_| Error::WordfileReadError(String::from(wordfile)))?
             .lines()
             .map(str::trim)
-            .for_each(|word| builder.insert(codec.encode(&word).unwrap())); // TODO
+            .map(|word| codec.encode(&word).map(|labels| builder.insert(&labels)))
+            .collect::<Result<Vec<()>, Error>>()?;
         let mut wordlist = Wordlist::from(builder);
         wordlist.wordfile = String::from(wordfile);
         wordlist.codec = codec.clone();
@@ -153,30 +153,31 @@ impl Wordlist {
     }
 
     /// Build a wordlist from a list of words.
-    /// ### Panics
+    /// ## Errors
     /// If a word can not be encoded with the given `codec`.
-    pub fn from_words(words: &[&str], codec: &Codec) -> Wordlist {
+    pub fn from_words(words: &[&str], codec: &Codec) -> Result<Wordlist, Error> {
         let mut builder = TrieVec::new();
         for &word in words {
-            builder.insert(codec.encode(word).unwrap()); // TODO
+            builder.insert(codec.encode(word)?);
         }
         let mut wordlist = Wordlist::from(builder);
         wordlist.codec = codec.clone();
-        wordlist
+        Ok(wordlist)
     }
 
     #[cfg(feature = "serde")]
     /// Deserialize the wordlist from a bincoded file.
     /// ## Errors
-    /// Fails if the wordlist can not be read.
-    /// ## Panics
-    /// If the contents can not be deserialized
-    pub fn deserialize_from(wordfile: &str) -> Result<Wordlist> {
+    /// - If the wordlist can not be read.
+    /// - If the contents can not be deserialized
+    pub fn deserialize_from(wordfile: &str) -> Result<Wordlist, Error> {
         use std::fs::File;
         use std::io::BufReader;
-        let file = File::open(wordfile)?;
+        let file =
+            File::open(wordfile).map_err(|_| Error::WordfileReadError(String::from(wordfile)))?;
         let reader = BufReader::new(file);
-        let mut wordlist: Wordlist = bincode::deserialize_from(reader).unwrap();
+        let mut wordlist: Wordlist = bincode::deserialize_from(reader)
+            .map_err(|_| Error::WordfileDeserializeError(String::from(wordfile)))?;
         wordlist.wordfile = String::from(wordfile);
         Ok(wordlist)
     }
@@ -184,8 +185,8 @@ impl Wordlist {
     /// Encode a word with our `codec`.
     /// ## Panics
     /// If the word can not be encoded.
-    pub fn encode(&self, word: &str) -> Vec<Label> {
-        self.codec.encode(word).unwrap()
+    pub fn encode(&self, word: &str) -> Result<Vec<Label>, Error> {
+        self.codec.encode(word)
     }
 
     /// Decode `labels` with our [`codec`](Wordlist::codec), and return the result as `String`.
@@ -254,7 +255,7 @@ mod test {
 
     #[test]
     fn test_range() {
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default());
+        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
         println!("{:?}", wordlist);
         assert_eq!(wordlist.word_count, 11);
         assert_eq!(wordlist.node_count, 17);
@@ -265,14 +266,14 @@ mod test {
 
     #[test]
     fn test_terminal() {
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default());
+        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
         assert!(wordlist.terminal[4]);
         assert!(!wordlist.terminal[0]);
     }
 
     #[test]
     fn test_iter_children() {
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default());
+        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
         for (label, i) in wordlist.iter_children(1) {
             println!("{} {}", i, label);
         }
@@ -280,12 +281,12 @@ mod test {
 
     #[test]
     fn test_is_word() {
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default());
+        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
         for &word in WORDS {
-            assert!(wordlist.is_word(wordlist.encode(word)));
+            assert!(wordlist.is_word(wordlist.encode(word).unwrap()));
         }
         for word in &["", "be", "xyzzy"] {
-            assert!(!wordlist.is_word(wordlist.encode(word)));
+            assert!(!wordlist.is_word(wordlist.encode(word).unwrap()));
         }
     }
 }

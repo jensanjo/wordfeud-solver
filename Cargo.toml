@@ -23,7 +23,7 @@ criterion = "0.3"
 
 [features]
 # default = ["rayon", "serde", "bincode"]
-default = []
+default = ["rayon"]
 
 [[bench]]
 name = "bench_wordlist"

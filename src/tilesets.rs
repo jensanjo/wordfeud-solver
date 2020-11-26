@@ -6,7 +6,7 @@ mod en;
 mod nl;
 mod se;
 
-/// These languages are supported. 
+/// These languages are supported.
 #[derive(Debug, Clone)]
 pub enum Language {
     /// English
@@ -40,7 +40,11 @@ impl<'a> TileSet<'a> {
         // get additional labels past a..z
         let extended: Vec<&str> = tiles[27..].iter().map(|&tile| tile.0).collect();
         let codec = Codec::new().extend(&extended);
-        TileSet { language, tiles, codec }
+        TileSet {
+            language,
+            tiles,
+            codec,
+        }
     }
 
     /// Return the points for tile, or 0 if not found

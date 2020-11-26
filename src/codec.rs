@@ -1,11 +1,10 @@
-use anyhow::Result;
+use crate::Error;
 use lazy_static::lazy_static;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::iter::Iterator;
 use std::str;
-use thiserror::Error;
 
 /// A label 1..31
 pub type Label = u8;
@@ -22,15 +21,6 @@ const ASCII_LC: &str = "abcdefghijklmnopqrstuvwxyz";
 
 lazy_static! {
     static ref DEFAULT_CODEC: Codec = Codec::new();
-}
-
-#[derive(Error, Debug)]
-/// Error during encoding/decoding between tiles and strings.
-pub enum CodecError {
-    #[error("encoder: invalid token '{0}'")]
-    EncodeError(String),
-    #[error("decode: invalid code {0}")]
-    DecodeError(Label),
 }
 
 #[derive(Debug, Clone)]
@@ -73,18 +63,16 @@ impl CodeSet {
         CodeSet { encoder, decoder }
     }
 
-    pub fn encode(&self, s: &str) -> Result<Label, CodecError> {
+    pub fn encode(&self, s: &str) -> Result<Label, Error> {
         self.encoder
             .get(&String::from(s))
-            .map_or(Err(CodecError::EncodeError(String::from(s))), |label| {
-                Ok(*label)
-            })
+            .map_or(Err(Error::EncodeError(String::from(s))), |label| Ok(*label))
     }
 
-    pub fn decode(&self, label: Label) -> Result<&str, CodecError> {
+    pub fn decode(&self, label: Label) -> Result<&str, Error> {
         self.decoder
             .get(&label)
-            .map_or(Err(CodecError::DecodeError(label)), |s| Ok(s))
+            .map_or(Err(Error::DecodeError(label)), |s| Ok(s))
     }
 }
 
@@ -135,13 +123,13 @@ impl Codec {
     /// An error is returned if the string can not be encoded with the codec.
     /// ## Examples
     /// ```
-    /// use wordfeud_solver::{Codec, CodecError};
+    /// use wordfeud_solver::{Codec, Error};
     /// let codec = Codec::new().extend(&["ä", "ö", "ü"]);
     /// let labels = codec.encode("azAZä *")?;
     /// assert_eq!(labels, vec![1,26,65,90,27,0,64]);
-    /// # Ok::<(), CodecError>(())
+    /// # Ok::<(), Error>(())
     /// ```
-    pub fn encode(&self, s: &str) -> Result<Vec<Label>, CodecError> {
+    pub fn encode(&self, s: &str) -> Result<Vec<Label>, Error> {
         s.chars()
             .map(|ch| self.codeset.encode(&String::from(ch)))
             .collect::<Result<Vec<_>, _>>()
@@ -152,24 +140,24 @@ impl Codec {
     /// An error is returned if the labels can not be decoded with the codec.
     /// ## Examples
     /// ```
-    /// use wordfeud_solver::{Codec, CodecError};
+    /// use wordfeud_solver::{Codec, Error};
     /// let codec = Codec::new().extend(&["ä", "ö", "ü"]);
     /// let labels = &[1,26,65,90,27,0,64];
     /// let decoded = codec.decode(labels)?;
     /// assert_eq!(decoded, &["a","z","A","Z","ä"," ", "*"]);
-    /// # Ok::<(), CodecError>(())
+    /// # Ok::<(), Error>(())
     /// ```
-    pub fn decode(&self, t: &[Label]) -> Result<Vec<&str>, CodecError> {
+    pub fn decode(&self, t: &[Label]) -> Result<Vec<&str>, Error> {
         t.iter()
             .map(|label| self.codeset.decode(*label))
             .collect::<Result<Vec<_>, _>>()
     }
 }
 
-pub fn encode(s: &str) -> Result<Vec<Label>, CodecError> {
+pub fn encode(s: &str) -> Result<Vec<Label>, Error> {
     DEFAULT_CODEC.encode(s)
 }
 
-pub fn decode(t: &[Label]) -> Result<Vec<&str>, CodecError> {
+pub fn decode(t: &[Label]) -> Result<Vec<&str>, Error> {
     DEFAULT_CODEC.decode(t)
 }

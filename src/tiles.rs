@@ -1,4 +1,3 @@
-use anyhow::Result;
 use std::convert::From;
 use std::convert::TryFrom;
 use std::fmt;
@@ -8,6 +7,7 @@ use std::slice::Iter;
 use tinyvec::ArrayVec;
 
 use crate::codec::{self, Label, BLANK, IS_WILDCARD, LETTER_MASK};
+use crate::Error;
 
 const N: usize = 15;
 
@@ -198,7 +198,7 @@ impl fmt::Debug for Row {
 }
 
 impl TryFrom<&str> for Row {
-    type Error = codec::CodecError;
+    type Error = Error;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         let labels = codec::encode(s)?;
@@ -294,7 +294,7 @@ impl fmt::Display for Tiles {
 }
 
 impl TryFrom<&str> for Tiles {
-    type Error = codec::CodecError;
+    type Error = Error;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         let labels = codec::encode(s)?;
@@ -332,6 +332,7 @@ impl ops::Index<ops::Range<usize>> for Tiles {
 #[cfg(test)]
 mod test {
     use super::*;
+    use anyhow::Result;
 
     #[test]
     fn test_nonzero() {

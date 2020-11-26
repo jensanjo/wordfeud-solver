@@ -36,8 +36,8 @@ fn bench_words(
 }
 
 fn bench_get_legal_characters(c: &mut Criterion) {
-    let wordlist = Wordlist::from_words(WORDS, &Codec::default());
-    let word = Row::try_from(wordlist.encode("a ")).unwrap();
+    let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
+    let word = Row::try_from("a ").unwrap();
     c.bench_function("wordlist.get_legal_characters", |b| {
         b.iter(|| wordlist.get_legal_characters(&word))
     });

@@ -16,33 +16,35 @@
 //!
 //! # Basic usage
 //!  ```
+//! # use std::convert::TryFrom;
 //! use wordfeud_solver::{Board, Letters};
-//! use std::convert::TryFrom;
 //!
-//! let mut board = Board::default().with_wordlist_from_words(&["rust", "rest"]);
-//! let letters = Letters::try_from("rusta").unwrap();
+//! let mut board = Board::default().with_wordlist_from_words(&["rust", "rest"])?;
+//! let letters = Letters::try_from("rusta")?;
 //! let results = board.calc_all_word_scores(letters);
 //! assert_eq!(results.len(),8);
 //! for (x,y,horizontal,word,score) in results {
 //!        println!("{} {} {} {} {}", x, y, horizontal, word, score);
 //!}
-//! board.play_word("rust", 7, 7, true, true);
+//! board.play_word("rust", 7, 7, true, true)?;
 //! println!("{}", board);
+//! # Ok::<(), anyhow::Error>(())
 //! ```
 //!
 //! # About implementation
 //!
 mod board;
 mod codec;
+mod error;
 mod grid;
 mod labelset;
 mod tiles;
 mod tilesets;
 mod wordlist;
-// mod test;
 
 pub use board::Board;
-pub use codec::{Codec, CodecError};
+pub use codec::Codec;
+pub use error::Error;
 pub use tiles::{Row, Tile, Tiles};
 pub use tilesets::{Language, TileSet};
 pub use wordlist::{Letters, RowData, Word, Wordlist};

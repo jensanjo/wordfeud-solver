@@ -1,3 +1,4 @@
+use crate::Error;
 use std::fmt;
 use std::str::FromStr;
 
@@ -39,10 +40,9 @@ impl fmt::Display for Cell {
 }
 
 impl FromStr for Cell {
-    type Err = &'static str;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        //assert!(s.len() == 2
         match s {
             "--" => Ok(NoBonus),
             "ss" => Ok(Start),
@@ -50,7 +50,7 @@ impl FromStr for Cell {
             "3l" => Ok(LetterBonus(3)),
             "2w" => Ok(WordBonus(2)),
             "3w" => Ok(WordBonus(3)),
-            _ => Err("invalid bonus"),
+            _ => Err(Error::GridParseError(String::from(s))),
         }
     }
 }
@@ -85,17 +85,23 @@ pub fn as_array(grid: &Grid) -> Vec<Vec<String>> {
         .collect::<Vec<_>>()
 }
 
-pub fn from_array(grid: &[Vec<String>]) -> Grid {
-    let mut board: Grid = [[NoBonus; N]; N];
+pub fn from_array(grid: &[Vec<String>]) -> Result<Grid, Error> {
     assert_eq!(grid.len(), N);
+    if grid.len() != N {
+        return Err(Error::InvalidRowCount(grid.len()));
+    }
+    let mut board: Grid = [[NoBonus; N]; N];
+
     for (i, row) in grid.iter().enumerate() {
-        assert_eq!(row.len(), N);
+        if row.len() != N {
+            return Err(Error::InvalidRowLength(row.len()));
+        }
         for (j, cell) in row.iter().enumerate() {
             let val = cell.parse().unwrap();
             board[i][j] = val;
         }
     }
-    board
+    Ok(board)
 }
 
 #[cfg(test)]
@@ -103,10 +109,11 @@ mod tests {
     pub use super::*;
 
     #[test]
-    fn test_grid_from_array() {
+    fn test_grid_from_array() -> Result<(), Error> {
         let grid = default();
         let grid_as_strings = as_array(&grid);
         println!("{:?}", grid_as_strings);
-        assert_eq!(as_array(&from_array(&grid_as_strings)), grid_as_strings);
+        assert_eq!(as_array(&from_array(&grid_as_strings)?), grid_as_strings);
+        Ok(())
     }
 }
