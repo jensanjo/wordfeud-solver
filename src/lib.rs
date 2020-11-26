@@ -44,5 +44,5 @@ mod wordlist;
 pub use board::Board;
 pub use codec::{Codec, CodecError};
 pub use tiles::{Row, Tile, Tiles};
-pub use tilesets::Language;
+pub use tilesets::{Language, TileSet};
 pub use wordlist::{Letters, RowData, Word, Wordlist};

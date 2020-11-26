@@ -6,16 +6,22 @@ mod en;
 mod nl;
 mod se;
 
+/// These languages are supported. 
 #[derive(Debug, Clone)]
 pub enum Language {
+    /// English
     EN,
+    /// Dutch
     NL,
+    /// Swedish
     SE,
 }
 
 /// label, count, points
 type TileInfo = (&'static str, u32, u32);
 
+/// A tileset for `wordfeud`. It contains the tile distribution for a supported language,
+/// and a codec to translate between words and tiles.
 #[derive(Debug, Clone)]
 pub struct TileSet<'a> {
     language: Language,
@@ -24,6 +30,7 @@ pub struct TileSet<'a> {
 }
 
 impl<'a> TileSet<'a> {
+    /// Return a new `TileSet` for language.
     pub fn new(language: Language) -> TileSet<'a> {
         let tiles = match language {
             Language::EN => en::TILESET,
@@ -36,7 +43,7 @@ impl<'a> TileSet<'a> {
         TileSet { language, tiles, codec }
     }
 
-    // return the points for tile, or 0 if not found
+    /// Return the points for tile, or 0 if not found
     pub fn points(&self, tilecode: Label) -> u32 {
         if let Some(&tile) = self.tiles.get(tilecode as usize) {
             return tile.2;
@@ -44,7 +51,7 @@ impl<'a> TileSet<'a> {
         0
     }
 
-    // return the number of tiles with this code in tileset, or 0 if not found
+    /// Return the number of tiles with this code in tileset, or 0 if not found
     pub fn count(&self, tilecode: Label) -> u32 {
         if let Some(&tile) = self.tiles.get(tilecode as usize) {
             return tile.1;
@@ -52,7 +59,7 @@ impl<'a> TileSet<'a> {
         0
     }
 
-    // return the number of tiles with this code in tileset, or 0 if not found
+    /// Return the number of tiles with this code in tileset, or 0 if not found
     pub fn label(&self, tilecode: Label) -> &'a str {
         if let Some(&tile) = self.tiles.get(tilecode as usize) {
             return tile.0;
@@ -60,6 +67,7 @@ impl<'a> TileSet<'a> {
         " "
     }
 
+    /// Return the codec for this language
     pub fn codec(&self) -> &Codec {
         &self.codec
     }
