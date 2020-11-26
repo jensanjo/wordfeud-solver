@@ -19,7 +19,7 @@
 //! use wordfeud_solver::{Board, Letters};
 //! use std::convert::TryFrom;
 //!
-//! let mut board = Board::default().wordlist_from_words(&["rust", "rest"]);
+//! let mut board = Board::default().with_wordlist_from_words(&["rust", "rest"]);
 //! let letters = Letters::try_from("rusta").unwrap();
 //! let results = board.calc_all_word_scores(letters);
 //! assert_eq!(results.len(),8);

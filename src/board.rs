@@ -76,9 +76,9 @@ impl<'a> Board<'a> {
     ///```
     /// Additional builder functions can be used to set the wordlist, grid and state of the board.
     /// See also:
-    /// - [`wordlist_from_file`](Board::wordlist_from_file)
-    /// - [`wordlist_from_words`](Board::wordlist_from_words)
-    /// - [`state_from_strings`](Board::state_from_strings)
+    /// - [`with_wordlist_from_file`](Board::with_wordlist_from_file)
+    /// - [`with_wordlist_from_words`](Board::with_wordlist_from_words)
+    /// - [`with_state_from_strings`](Board::with_state_from_strings)
     #[must_use]
     pub fn new(language: Language) -> Board<'a> {
         let grid = grid::default();
@@ -110,10 +110,10 @@ impl<'a> Board<'a> {
     /// ## Examples
     /// ```
     /// use wordfeud_solver::Board;
-    /// let board = Board::default().wordlist_from_file("wordlists/words.txt")?;
+    /// let board = Board::default().with_wordlist_from_file("wordlists/words.txt")?;
     /// # Ok::<(), anyhow::Error>(())
     /// ```
-    pub fn wordlist_from_file(mut self, wordfile: &str) -> Result<Board<'a>> {
+    pub fn with_wordlist_from_file(mut self, wordfile: &str) -> Result<Board<'a>> {
         self.wordlist = Wordlist::from_file(wordfile, self.codec())?;
         self.set_rowdata();
         Ok(self)
@@ -124,9 +124,9 @@ impl<'a> Board<'a> {
     /// ## Example
     /// ```no_run
     /// use wordfeud_solver::Board;
-    /// let board = Board::default().wordlist_from_words(&["aardvark", "zebra"]);
+    /// let board = Board::default().with_wordlist_from_words(&["aardvark", "zebra"]);
     ///```
-    pub fn wordlist_from_words(mut self, words: &[&str]) -> Board<'a> {
+    pub fn with_wordlist_from_words(mut self, words: &[&str]) -> Board<'a> {
         self.wordlist = Wordlist::from_words(words, self.codec());
         self.set_rowdata();
         self
@@ -139,7 +139,7 @@ impl<'a> Board<'a> {
     ///
     /// ## Errors
     /// This function will give an error if the `wordfile` does not exist, or cannot be decoded.
-    pub fn wordlist_deserialize_from(mut self, wordfile: &str) -> Result<Board<'a>> {
+    pub fn with_wordlist_deserialize_from(mut self, wordfile: &str) -> Result<Board<'a>> {
         self.wordlist = Wordlist::deserialize_from(wordfile)?;
         self.set_rowdata();
         Ok(self)
@@ -148,7 +148,7 @@ impl<'a> Board<'a> {
     /// Parse board state from a list of strings.
     /// The list must contain 15 rows of 15 characters.
     /// ## Panics
-    /// If the list of strings has wrong dimensions or cannot be parsed rows.
+    /// If the list of strings has wrong dimensions or cannot be parsed as rows.
     ///
     /// ## Examples
     /// ```
@@ -170,9 +170,9 @@ impl<'a> Board<'a> {
     /// "    k     os   ",
     /// "   zerk   g    ",
     /// ];
-    /// let board = Board::default().state_from_strings(state);
+    /// let board = Board::default().with_state_from_strings(state);
     /// ```
-    pub fn state_from_strings(mut self, rows: &[&str]) -> Board<'a> {
+    pub fn with_state_from_strings(mut self, rows: &[&str]) -> Board<'a> {
         let mut state = [Row::new(); N];
         for (i, &row) in rows.iter().enumerate() {
             assert_eq!(row.len(), N);
@@ -196,7 +196,7 @@ impl<'a> Board<'a> {
     /// Set board cells from string representation
     /// ## Panics
     /// If the grid has wrong dimensions or cannot be parsed as valid board cells.
-    pub fn grid_from_strings(mut self, grid: Vec<Vec<String>>) -> Board<'a> {
+    pub fn with_grid_from_strings(mut self, grid: Vec<Vec<String>>) -> Board<'a> {
         self.board = grid::from_array(&grid);
         self
     }
@@ -389,7 +389,7 @@ impl<'a> Board<'a> {
     /// ```
     /// # use std::convert::TryFrom;
     /// use wordfeud_solver::{Board, Letters, Row};
-    /// let board = Board::default().wordlist_from_words(&["the", "quick", "brown", "fox"]);
+    /// let board = Board::default().with_wordlist_from_words(&["the", "quick", "brown", "fox"]);
     /// let row = Row::try_from("               ").unwrap();
     /// let letters = Letters::try_from("befnrowx").unwrap();
     /// let res = board.words(&row, true, 7, letters);
@@ -417,7 +417,7 @@ impl<'a> Board<'a> {
     /// ```
     /// # use std::convert::TryFrom;
     /// use wordfeud_solver::{Board, Letters, Row};
-    /// let board = Board::default().wordlist_from_words(&["the", "quick", "brown", "fox"]);
+    /// let board = Board::default().with_wordlist_from_words(&["the", "quick", "brown", "fox"]);
     /// let letters = Letters::try_from("befnrowx").unwrap();
     /// let res = board.calc_all_word_scores(letters);
     /// assert_eq!(res.len(),16);
@@ -564,7 +564,7 @@ mod tests {
 
     #[test]
     fn test_state() {
-        let mut board = board_nl().state_from_strings(&TEST_STATE);
+        let mut board = board_nl().with_state_from_strings(&TEST_STATE);
 
         assert!(board.is_occupied(4, 0));
         assert!(!board.is_occupied(0, 0));
@@ -576,7 +576,7 @@ mod tests {
 
     #[test]
     fn test_surrounding_words() {
-        let board = board_nl().state_from_strings(&TEST_STATE);
+        let board = board_nl().with_state_from_strings(&TEST_STATE);
         let sw = board
             .surrounding_words(true, 8)
             .iter()
@@ -592,7 +592,7 @@ mod tests {
 
     #[test]
     fn test_calc_word_points() {
-        let board = board_nl().state_from_strings(&TEST_STATE);
+        let board = board_nl().with_state_from_strings(&TEST_STATE);
         let word = Word::try_from("ster").unwrap();
         let points = board.calc_word_points(&word, 3, 0, true, true);
         assert_eq!(7, points);
@@ -605,8 +605,8 @@ mod tests {
     fn test_words() {
         let words = &["af", "ja"];
         let board = board_nl()
-            .wordlist_from_words(words)
-            .state_from_strings(&TEST_STATE);
+            .with_wordlist_from_words(words)
+            .with_state_from_strings(&TEST_STATE);
         let letters = Letters::try_from("j*").unwrap();
         let i = 0;
         let horizontal = true;
@@ -624,8 +624,8 @@ mod tests {
             "af", "ah", "al", "aar", "aas", "be", "bi", "bo", "bar", "bes", "bel",
         ];
         let board = board_nl()
-            .wordlist_from_words(words)
-            .state_from_strings(&TEST_STATE);
+            .with_wordlist_from_words(words)
+            .with_state_from_strings(&TEST_STATE);
 
         let letters = Letters::try_from("abel")?;
         let res = board.calc_all_word_scores(letters);
@@ -658,7 +658,7 @@ mod tests {
 
     #[test]
     fn test_board() {
-        let board = board_nl().state_from_strings(&TEST_STATE);
+        let board = board_nl().with_state_from_strings(&TEST_STATE);
         println!("{}", board);
     }
 
@@ -676,7 +676,7 @@ mod tests {
     fn test_main() {
         use std::convert::TryFrom;
 
-        let mut board = board_nl().wordlist_from_words(&["rust", "rest"]);
+        let mut board = board_nl().with_wordlist_from_words(&["rust", "rest"]);
         let letters = Letters::try_from("rusta").unwrap();
         let results = board.calc_all_word_scores(letters);
         for (x, y, horizontal, word, score) in results {

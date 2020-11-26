@@ -24,9 +24,9 @@ const TEST_STATE: &[&str] = &[
 
 fn bench_calc_all_word_scores(c: &mut Criterion, name: &str, letters: &str) {
     let board = Board::new(Language::NL)
-        .wordlist_from_file(WORDFILE)
+        .with_wordlist_from_file(WORDFILE)
         .unwrap()
-        .state_from_strings(&TEST_STATE);
+        .with_state_from_strings(&TEST_STATE);
 
     let letters = Letters::try_from(letters).unwrap();
     c.bench_function(&format!("board.{}", name), |b| {

@@ -25,13 +25,13 @@ fn main() -> Result<()> {
     let t0 = Instant::now();
     #[cfg(feature = "bincode")]
     let board = Board::new(Language::NL)
-        .wordlist_deserialize_from("wordlists/wordlist-nl.bin")
+        .with_wordlist_deserialize_from("wordlists/wordlist-nl.bin")
         .unwrap();
     #[cfg(not(feature = "bincode"))]
     let board = Board::new(Language::NL)
-        .wordlist_from_file("wordlists/wordlist-nl.txt")
+        .with_wordlist_from_file("wordlists/wordlist-nl.txt")
         .unwrap();
-    let board = board.state_from_strings(&TEST_STATE);
+    let board = board.with_state_from_strings(&TEST_STATE);
     let dt = t0.elapsed();
     println!("Create board with wordlist took {:?}", dt);
     let letters = Letters::try_from("koetsje")?;
