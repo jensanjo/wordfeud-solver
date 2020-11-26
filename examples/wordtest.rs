@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::convert::TryFrom;
 use std::time::Instant;
-use wordfeud_solver::{Board, Letters};
+use wordfeud_solver::{Board, Language, Letters};
 
 const TEST_STATE: &[&str] = &[
     "    t     c   f",
@@ -24,11 +24,11 @@ const TEST_STATE: &[&str] = &[
 fn main() -> Result<()> {
     let t0 = Instant::now();
     #[cfg(feature = "bincode")]
-    let board = Board::new("nl")
+    let board = Board::new(Language::NL)
         .wordlist_deserialize_from("wordlists/wordlist-nl.bin")
         .unwrap();
     #[cfg(not(feature = "bincode"))]
-    let board = Board::new("nl")
+    let board = Board::new(Language::NL)
         .wordlist_from_file("wordlists/wordlist-nl.txt")
         .unwrap();
     let board = board.state_from_strings(&TEST_STATE);

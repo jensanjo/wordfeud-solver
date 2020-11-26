@@ -6,28 +6,34 @@ mod en;
 mod nl;
 mod se;
 
+#[derive(Debug, Clone)]
+pub enum Language {
+    EN,
+    NL,
+    SE,
+}
+
 /// label, count, points
 type TileInfo = (&'static str, u32, u32);
 
 #[derive(Debug, Clone)]
 pub struct TileSet<'a> {
-    name: &'a str,
+    language: Language,
     tiles: &'a [TileInfo],
     codec: Codec,
 }
 
 impl<'a> TileSet<'a> {
-    pub fn new(name: &'a str) -> TileSet<'a> {
-        let tiles = match name {
-            "en" => en::TILESET,
-            "nl" => nl::TILESET,
-            "se" => se::TILESET,
-            _ => panic!(format!("Invalid tileset '{}'", name)), // TODO return result
+    pub fn new(language: Language) -> TileSet<'a> {
+        let tiles = match language {
+            Language::EN => en::TILESET,
+            Language::NL => nl::TILESET,
+            Language::SE => se::TILESET,
         };
         // get additional labels past a..z
         let extended: Vec<&str> = tiles[27..].iter().map(|&tile| tile.0).collect();
         let codec = Codec::new().extend(&extended);
-        TileSet { name, tiles, codec }
+        TileSet { language, tiles, codec }
     }
 
     // return the points for tile, or 0 if not found
@@ -66,7 +72,7 @@ mod tests {
 
     #[test]
     fn test_tileset() {
-        let tileset = TileSet::new("nl");
+        let tileset = TileSet::new(Language::NL);
         println!("{:?}", tileset);
         assert_eq!(tileset.points(0), 0);
         assert_eq!(tileset.points(26), 5);
@@ -76,7 +82,7 @@ mod tests {
 
     #[test]
     fn test_codec() -> Result<()> {
-        let tileset = TileSet::new("se");
+        let tileset = TileSet::new(Language::SE);
         let codec = tileset.codec();
         assert_eq!(codec.encode("azåAZ*")?, &[1, 26, 27, 65, 90, 64]);
         assert_eq!(

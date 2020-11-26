@@ -4,7 +4,7 @@ use crate::grid::{
     Cell::{LetterBonus, WordBonus},
     Grid,
 };
-use crate::tilesets::TileSet;
+use crate::tilesets::{TileSet, Language};
 use crate::wordlist::{LetterSet, Row, RowData, Word, Wordlist};
 use crate::{Letters, Tile, Tiles};
 
@@ -38,7 +38,7 @@ impl<'a> fmt::Display for Board<'a> {
 
 impl<'a> Default for Board<'a> {
     fn default() -> Self {
-        Self::new("en")
+        Self::new(Language::EN)
     }
 }
 
@@ -59,22 +59,20 @@ pub struct Board<'a> {
 
 impl<'a> Board<'a> {
     /// Create a new empty `wordfeud ` board, with 15x15 squares.
-    /// The `language` is used to specify the tile distribution used in the game.
+    /// The [`language`](crate::Language) is used to specify the tile distribution used in the game.
     /// See [Wordfeud Help](https://wordfeud.com/wf/help/): Tile Distribution.
     /// Currently supported:
-    /// - `"en"` (english),
-    /// - `"nl"` (dutch),
-    /// - `"se"` (swedish)
-    /// ## Panics
-    /// * If an unspecified language is given.
+    /// - `EN` (english),
+    /// - `NL` (dutch),
+    /// - `SE` (swedish)
     ///
     /// ## Examples
     ///
     /// Basic usage:
     ///```
-    /// use wordfeud_solver::Board;
+    /// use wordfeud_solver::{Board, Language};
     ///
-    /// let board = Board::new("nl");
+    /// let board = Board::new(Language::NL);
     ///```
     /// Additional builder functions can be used to set the wordlist, grid and state of the board.
     /// See also:
@@ -82,7 +80,7 @@ impl<'a> Board<'a> {
     /// - [`wordlist_from_words`](Board::wordlist_from_words)
     /// - [`state_from_strings`](Board::state_from_strings)
     #[must_use]
-    pub fn new(language: &'static str) -> Board<'a> {
+    pub fn new(language: Language) -> Board<'a> {
         let grid = grid::default();
         let empty_row = Row::from(vec![EMPTY; N]);
         let mut empty_rowdata = RowData::new();
@@ -112,7 +110,7 @@ impl<'a> Board<'a> {
     /// ## Examples
     /// ```
     /// use wordfeud_solver::Board;
-    /// let board = Board::new("en").wordlist_from_file("wordlists/words.txt")?;
+    /// let board = Board::default().wordlist_from_file("wordlists/words.txt")?;
     /// # Ok::<(), anyhow::Error>(())
     /// ```
     pub fn wordlist_from_file(mut self, wordfile: &str) -> Result<Board<'a>> {
@@ -126,7 +124,7 @@ impl<'a> Board<'a> {
     /// ## Example
     /// ```no_run
     /// use wordfeud_solver::Board;
-    /// let board = Board::new("en").wordlist_from_words(&["aardvark", "zebra"]);
+    /// let board = Board::default().wordlist_from_words(&["aardvark", "zebra"]);
     ///```
     pub fn wordlist_from_words(mut self, words: &[&str]) -> Board<'a> {
         self.wordlist = Wordlist::from_words(words, self.codec());
@@ -172,7 +170,7 @@ impl<'a> Board<'a> {
     /// "    k     os   ",
     /// "   zerk   g    ",
     /// ];
-    /// let board = Board::new("en").state_from_strings(state);
+    /// let board = Board::default().state_from_strings(state);
     /// ```
     pub fn state_from_strings(mut self, rows: &[&str]) -> Board<'a> {
         let mut state = [Row::new(); N];
@@ -209,7 +207,7 @@ impl<'a> Board<'a> {
     /// ## Examples
     /// ```
     /// use wordfeud_solver::Board;
-    /// let mut board = Board::new("en");
+    /// let mut board = Board::default();
     /// board.play_word("aardvark", 7, 7, true, true);
     /// assert!(board.is_occupied(7,7));
     pub fn is_occupied(&self, x: usize, y: usize) -> bool {
@@ -256,7 +254,7 @@ impl<'a> Board<'a> {
     /// ## Examples
     /// ```
     /// use wordfeud_solver::Board;
-    /// let mut board = Board::new("en");
+    /// let mut board = Board::default();
     /// let used = board.play_word("aardvark", 7,7,true, true);
     /// assert_eq!(used, "aardvark");
     ///
@@ -317,7 +315,7 @@ impl<'a> Board<'a> {
     /// ```
     /// # use std::convert::TryFrom;
     /// # use wordfeud_solver::{Board, Word};
-    /// let board = Board::new("en");
+    /// let board = Board::default();
     /// let word = Word::try_from("wordfeud")?;
     /// let points = board.calc_word_points(&word, 7, 7, true, true);
     /// assert_eq!(points, 78);
@@ -391,7 +389,7 @@ impl<'a> Board<'a> {
     /// ```
     /// # use std::convert::TryFrom;
     /// use wordfeud_solver::{Board, Letters, Row};
-    /// let board = Board::new("en").wordlist_from_words(&["the", "quick", "brown", "fox"]);
+    /// let board = Board::default().wordlist_from_words(&["the", "quick", "brown", "fox"]);
     /// let row = Row::try_from("               ").unwrap();
     /// let letters = Letters::try_from("befnrowx").unwrap();
     /// let res = board.words(&row, true, 7, letters);
@@ -419,7 +417,7 @@ impl<'a> Board<'a> {
     /// ```
     /// # use std::convert::TryFrom;
     /// use wordfeud_solver::{Board, Letters, Row};
-    /// let board = Board::new("en").wordlist_from_words(&["the", "quick", "brown", "fox"]);
+    /// let board = Board::default().wordlist_from_words(&["the", "quick", "brown", "fox"]);
     /// let letters = Letters::try_from("befnrowx").unwrap();
     /// let res = board.calc_all_word_scores(letters);
     /// assert_eq!(res.len(),16);
@@ -560,9 +558,13 @@ mod tests {
         "   zerk   g    ",
     ];
 
+    fn board_nl<'a>() -> Board<'a> {
+        Board::new(Language::NL)
+    }
+
     #[test]
     fn test_state() {
-        let mut board = Board::new("nl").state_from_strings(&TEST_STATE);
+        let mut board = board_nl().state_from_strings(&TEST_STATE);
 
         assert!(board.is_occupied(4, 0));
         assert!(!board.is_occupied(0, 0));
@@ -574,7 +576,7 @@ mod tests {
 
     #[test]
     fn test_surrounding_words() {
-        let board = Board::new("nl").state_from_strings(&TEST_STATE);
+        let board = board_nl().state_from_strings(&TEST_STATE);
         let sw = board
             .surrounding_words(true, 8)
             .iter()
@@ -590,7 +592,7 @@ mod tests {
 
     #[test]
     fn test_calc_word_points() {
-        let board = Board::new("nl").state_from_strings(&TEST_STATE);
+        let board = board_nl().state_from_strings(&TEST_STATE);
         let word = Word::try_from("ster").unwrap();
         let points = board.calc_word_points(&word, 3, 0, true, true);
         assert_eq!(7, points);
@@ -602,7 +604,7 @@ mod tests {
     #[test]
     fn test_words() {
         let words = &["af", "ja"];
-        let board = Board::new("nl")
+        let board = board_nl()
             .wordlist_from_words(words)
             .state_from_strings(&TEST_STATE);
         let letters = Letters::try_from("j*").unwrap();
@@ -621,7 +623,7 @@ mod tests {
         let words = &[
             "af", "ah", "al", "aar", "aas", "be", "bi", "bo", "bar", "bes", "bel",
         ];
-        let board = Board::new("nl")
+        let board = board_nl()
             .wordlist_from_words(words)
             .state_from_strings(&TEST_STATE);
 
@@ -655,51 +657,15 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "calc_all_word_scores_iter")]
-    fn test_calc_all_word_scores_iter() -> Result<()> {
-        let words = &[
-            "af", "ah", "al", "aar", "aas", "be", "bi", "bo", "bar", "bes", "bel",
-        ];
-        let board = Board::new("nl")
-            .wordlist_from_words(words)
-            .state_from_strings(&TEST_STATE);
-        let letters = Letters::try_from("abel")?;
-        let res = board.calc_all_word_scores_iter(letters);
-
-        let expect = [
-            (13, 0, true, "af", 5),
-            (3, 1, true, "be", 5),
-            (3, 1, true, "bel", 14),
-            (13, 1, true, "bo", 9),
-            (2, 2, true, "bar", 14),
-            (3, 8, true, "bes", 8),
-            (8, 6, false, "bo", 5),
-        ];
-
-        assert_eq!(expect.len(), res.len());
-        for ((rx, ry, rhor, rword, rscore), (ex, ey, ehor, eword, escore)) in
-            res.iter().zip(&expect)
-        {
-            assert_eq!(rx, ex);
-            assert_eq!(ry, ey);
-            assert_eq!(rhor, ehor);
-            let rword = rword.to_string();
-            assert_eq!(&rword, eword);
-            assert_eq!(rscore, escore);
-        }
-        Ok(())
-    }
-
-    #[test]
     fn test_board() {
-        let board = Board::new("nl").state_from_strings(&TEST_STATE);
+        let board = board_nl().state_from_strings(&TEST_STATE);
         println!("{}", board);
     }
 
     #[test]
     fn test_bingo() -> Result<()> {
         // playing all letters gets a 40 point bonus
-        let board = Board::new("nl");
+        let board = board_nl();
         let word = Word::try_from("hoentje")?;
         let score = board.calc_word_points(&word, 7, 7, true, true);
         assert_eq!(score, 68);
@@ -710,7 +676,7 @@ mod tests {
     fn test_main() {
         use std::convert::TryFrom;
 
-        let mut board = Board::new("nl").wordlist_from_words(&["rust", "rest"]);
+        let mut board = board_nl().wordlist_from_words(&["rust", "rest"]);
         let letters = Letters::try_from("rusta").unwrap();
         let results = board.calc_all_word_scores(letters);
         for (x, y, horizontal, word, score) in results {

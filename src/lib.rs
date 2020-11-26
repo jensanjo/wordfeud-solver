@@ -19,7 +19,7 @@
 //! use wordfeud_solver::{Board, Letters};
 //! use std::convert::TryFrom;
 //!
-//! let mut board = Board::new("en").wordlist_from_words(&["rust", "rest"]);
+//! let mut board = Board::default().wordlist_from_words(&["rust", "rest"]);
 //! let letters = Letters::try_from("rusta").unwrap();
 //! let results = board.calc_all_word_scores(letters);
 //! assert_eq!(results.len(),8);
@@ -44,4 +44,5 @@ mod wordlist;
 pub use board::Board;
 pub use codec::{Codec, CodecError};
 pub use tiles::{Row, Tile, Tiles};
+pub use tilesets::Language;
 pub use wordlist::{Letters, RowData, Word, Wordlist};
