@@ -22,6 +22,7 @@ pub type Word = Tiles;
 /// `Tiles` that can be used to make a word. Can contain blanks (unassigned wildcard).
 pub type Letters = Tiles;
 
+/// The dimension of wordfeud board: N x N squares
 pub const N: usize = 15;
 
 type RowCache = [(LetterSet, bool); N + 1];
@@ -141,7 +142,10 @@ impl Wordlist {
     pub fn from_file(wordfile: &str, codec: &Codec) -> Result<Wordlist, Error> {
         let mut builder = TrieVec::new();
         read_to_string(wordfile)
-            .map_err(|_| Error::WordfileReadError(String::from(wordfile)))?
+            .map_err(|source| Error::ReadError {
+                path: String::from(wordfile),
+                source,
+            })?
             .lines()
             .map(str::trim)
             .map(|word| codec.encode(&word).map(|labels| builder.insert(&labels)))
@@ -183,17 +187,17 @@ impl Wordlist {
     }
 
     /// Encode a word with our `codec`.
-    /// ## Panics
+    /// ## Errors
     /// If the word can not be encoded.
     pub fn encode(&self, word: &str) -> Result<Vec<Label>, Error> {
         self.codec.encode(word)
     }
 
     /// Decode `labels` with our [`codec`](Wordlist::codec), and return the result as `String`.
-    /// ## Panics
+    /// ## Errors
     /// If the labels can not be decoded.
-    pub fn decode(&self, labels: &[Label]) -> String {
-        self.codec.decode(labels).unwrap().join("")
+    pub fn decode(&self, labels: &[Label]) -> Result<String, Error> {
+        Ok(self.codec.decode(labels)?.join(""))
     }
 
     /// Return the start and end index of the child nodes of node `i`,

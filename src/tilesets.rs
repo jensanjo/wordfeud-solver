@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 use crate::codec::{Codec, Label};
-// use anyhow::Result;
 
 mod en;
 mod nl;
@@ -21,7 +20,8 @@ pub enum Language {
 type TileInfo = (&'static str, u32, u32);
 
 /// A tileset for `wordfeud`. It contains the tile distribution for a supported language,
-/// and a codec to translate between words and tiles.
+/// and a codec to translate between words and tiles. The tile distributions are specified on the 
+/// [Wordfeud.com website](https://wordfeud.com/wf/help/)
 #[derive(Debug, Clone)]
 pub struct TileSet<'a> {
     language: Language,
@@ -80,7 +80,7 @@ impl<'a> TileSet<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::Result;
+    use crate::Error;
 
     #[test]
     fn test_tileset() {
@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    fn test_codec() -> Result<()> {
+    fn test_codec() -> Result<(), Error> {
         let tileset = TileSet::new(Language::SE);
         let codec = tileset.codec();
         assert_eq!(codec.encode("azåAZ*")?, &[1, 26, 27, 65, 90, 64]);

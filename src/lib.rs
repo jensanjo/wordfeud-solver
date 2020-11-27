@@ -11,14 +11,14 @@
 //! By default a standard board is used, but you can specify your own "random" board.
 //! The wordlist must be in utf-8 and contain one word per line.
 //! Several wordfeud wordlists are available on the internet.
-//! A wordlist for the dutch language is available **TODO**. It is based on the [`OpenTaal`](https://www.opentaal.org)
+//! A wordlist for the dutch language is available [here](https://github.com/jensanjo/wordfeud-wordlists).
+//! It is based on the [`OpenTaal`](https://www.opentaal.org)
 //! wordlist, with modifications by the author.
 //!
 //! # Basic usage
 //!  ```
 //! # use std::convert::TryFrom;
-//! use wordfeud_solver::{Board, Letters};
-//!
+//! # use wordfeud_solver::{Board, Word, Letters, Error};
 //! let mut board = Board::default().with_wordlist_from_words(&["rust", "rest"])?;
 //! let letters = Letters::try_from("rusta")?;
 //! let results = board.calc_all_word_scores(letters);
@@ -26,9 +26,10 @@
 //! for (x,y,horizontal,word,score) in results {
 //!        println!("{} {} {} {} {}", x, y, horizontal, word, score);
 //!}
-//! board.play_word("rust", 7, 7, true, true)?;
+//! let word =  Word::try_from("rust")?;
+//! board.play_word(word, 7, 7, true, true)?;
 //! println!("{}", board);
-//! # Ok::<(), anyhow::Error>(())
+//! # Ok::<(), Error>(())
 //! ```
 //!
 //! # About implementation

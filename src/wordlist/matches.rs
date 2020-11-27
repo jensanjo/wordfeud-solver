@@ -202,9 +202,10 @@ impl Wordlist {
 mod test {
     use super::*;
     use crate::codec::Codec;
-    use anyhow::Result;
     use std::collections::HashSet;
     use std::convert::TryFrom;
+
+    type Result<T> = std::result::Result<T, crate::Error>;
 
     const WORDS: &[&str] = &[
         "af", "ah", "al", "aar", "aas", "bi", "bo", "bar", "bes", "bel", "belt",

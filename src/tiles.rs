@@ -332,7 +332,6 @@ impl ops::Index<ops::Range<usize>> for Tiles {
 #[cfg(test)]
 mod test {
     use super::*;
-    use anyhow::Result;
 
     #[test]
     fn test_nonzero() {
@@ -341,7 +340,7 @@ mod test {
     }
 
     #[test]
-    fn test_row() -> Result<()> {
+    fn test_row() -> Result<(), Error> {
         let row = Row::try_from("abzAZ ")?;
         for t in row.iter() {
             println!("{:?}", t);
@@ -353,7 +352,7 @@ mod test {
     }
 
     #[test]
-    fn test_tiles() -> Result<()> {
+    fn test_tiles() -> Result<(), Error> {
         let tiles = Tiles::try_from("abzAZ")?;
         for t in tiles.iter() {
             println!("{:?}", t);
@@ -363,7 +362,7 @@ mod test {
     }
 
     #[test]
-    fn test_tiles_from_row() -> Result<()> {
+    fn test_tiles_from_row() -> Result<(), Error> {
         let row = Row::try_from("Aap")?;
         let tiles = Tiles::from(&row);
         println!("{:?} {:?} \"{}\"", row, tiles, tiles);
@@ -371,7 +370,7 @@ mod test {
     }
 
     #[test]
-    fn test_start_end() -> Result<()> {
+    fn test_start_end() -> Result<(), Error> {
         assert_eq!(Row::try_from("  aap noot ")?.start_end(1), (1, 5));
         assert_eq!(Row::try_from("aap")?.start_end(1), (0, 3));
         assert_eq!(Row::try_from("  aap noot ")?.start_end(6), (6, 10));
@@ -381,7 +380,7 @@ mod test {
     }
 
     #[test]
-    fn test_surrounding_word() -> Result<()> {
+    fn test_surrounding_word() -> Result<(), Error> {
         let row = Row::try_from("  aap noot ")?;
         assert_eq!(row.surrounding_word(1).to_string(), " aap");
         assert_eq!(row.surrounding_word(2).to_string(), "aap");

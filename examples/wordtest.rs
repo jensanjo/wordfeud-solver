@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::convert::TryFrom;
 use std::time::Instant;
-use wordfeud_solver::{Board, Language, Letters};
+use wordfeud_solver::{Board, Language, Word, Letters};
 
 const TEST_STATE: &[&str] = &[
     "    t     c   f",
@@ -21,16 +21,13 @@ const TEST_STATE: &[&str] = &[
     "   zerk   g    ",
 ];
 
-fn main() -> Result<()> {
+fn run() -> Result<()> {
     let t0 = Instant::now();
     #[cfg(feature = "bincode")]
-    let board = Board::new(Language::NL)
-        .with_wordlist_deserialize_from("wordlists/wordlist-nl.bin")
-        .unwrap();
+    let board =
+        Board::new(Language::NL).with_wordlist_deserialize_from("wordlists/wordlist-nl.bin")?;
     #[cfg(not(feature = "bincode"))]
-    let board = Board::new(Language::NL)
-        .with_wordlist_from_file("wordlists/wordlist-nl.txt")
-        .unwrap();
+    let board = Board::new(Language::NL).with_wordlist_from_file("wordlists/wordlist-nl.txt")?;
     let board = board.with_state_from_strings(&TEST_STATE)?;
     let dt = t0.elapsed();
     println!("Create board with wordlist took {:?}", dt);
@@ -54,5 +51,15 @@ fn main() -> Result<()> {
             println!("({}, {}, {}, \"{}\", {}", x, y, hor, word, score);
         }
     }
+    // Play a word
+    let mut board = board;
+    board.play_word(Word::try_from("jokert")?, 0, 2, true, true)?;
+    println!("{}", board);
     Ok(())
+}
+
+fn main() {
+    if let Err(err) = run() {
+        eprintln!("Error: {:?}", err);
+    }
 }
