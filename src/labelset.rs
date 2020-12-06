@@ -1,4 +1,4 @@
-use crate::codec;
+// use crate::codec;
 use bitintr::{Bzhi, Popcnt};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -54,12 +54,12 @@ impl LabelSet {
     }
 }
 
-impl fmt::Display for LabelSet {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let labels: Vec<u8> = self.iter().collect();
-        write!(f, "{}", codec::decode(&labels).unwrap().join(""))
-    }
-}
+// impl fmt::Display for LabelSet {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         let labels: Vec<u8> = self.iter().collect();
+//         write!(f, "{}", codec::decode(&labels).unwrap().join(""))
+//     }
+// }
 
 impl fmt::Debug for LabelSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -114,6 +114,12 @@ impl From<Vec<u8>> for LabelSet {
     }
 }
 
+impl Into<Vec<u8>> for LabelSet {
+    fn into(self) -> Vec<u8> {
+        self.iter().collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,5 +152,12 @@ mod tests {
         assert_eq!(labels.index_of(15), Some(9));
         assert_eq!(labels.index_of(2), None);
         assert_eq!(labels.len(), 10);
+    }
+
+    #[test]
+    fn test_into() {
+        let labels = LabelSet::from(vec![0u8, 1, 4, 5, 7, 8, 10, 12, 14, 15]);
+        let v: Vec<u8> = labels.into();
+        println!("{:?}", &v);
     }
 }

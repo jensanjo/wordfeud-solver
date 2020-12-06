@@ -1,6 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use std::convert::TryFrom;
-use wordfeud_solver::{Codec, Letters, Row, RowData, Wordlist};
+use wordfeud_solver::{Codec, RowData, Wordlist};
 
 const WORDS: &[&str] = &[
     "af", "ah", "al", "aar", "aas", "bi", "bo", "bar", "bes", "bel",
@@ -24,8 +23,8 @@ fn bench_words(
     rowdata: &RowData,
     letters: &str,
 ) {
-    let row = Row::try_from(row).unwrap();
-    let letters = Letters::try_from(letters).unwrap();
+    let row = wordlist.encode(row).unwrap();
+    let letters = wordlist.encode(letters).unwrap();
     c.bench_function(name, |b| {
         b.iter(|| {
             wordlist
@@ -37,7 +36,7 @@ fn bench_words(
 
 fn bench_get_legal_characters(c: &mut Criterion) {
     let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
-    let word = Row::try_from("a ").unwrap();
+    let word = wordlist.encode("a ").unwrap();
     c.bench_function("wordlist.get_legal_characters", |b| {
         b.iter(|| wordlist.get_legal_characters(&word))
     });
@@ -46,10 +45,10 @@ fn bench_get_legal_characters(c: &mut Criterion) {
 fn bench_node_matches(c: &mut Criterion, name: &str, wordfile: &str, letters: &str) {
     //let wordlist = Wordlist::from_words(WORDS);
     let wordlist = Wordlist::from_file(wordfile, &Codec::default()).unwrap();
-    let row = Row::try_from("    ").unwrap();
+    let row = wordlist.encode("    ").unwrap();
     let rowdata: RowData = wordlist.connected_row(&row);
     let pos = 0;
-    let letters = Letters::try_from(letters).unwrap();
+    let letters = wordlist.encode(letters).unwrap();
     c.bench_function(name, |b| {
         b.iter(|| {
             wordlist

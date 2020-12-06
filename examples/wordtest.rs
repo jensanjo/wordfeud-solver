@@ -1,7 +1,6 @@
 use anyhow::Result;
-use std::convert::TryFrom;
 use std::time::Instant;
-use wordfeud_solver::{Board, Language, Word, Letters};
+use wordfeud_solver::{Board, Language};
 
 const TEST_STATE: &[&str] = &[
     "    t     c   f",
@@ -31,13 +30,12 @@ fn run() -> Result<()> {
     let board = board.with_state_from_strings(&TEST_STATE)?;
     let dt = t0.elapsed();
     println!("Create board with wordlist took {:?}", dt);
-    let letters = Letters::try_from("koetsje")?;
-    board.calc_all_word_scores(letters);
+    let letters = "koetsje";
+    board.calc_all_word_scores(letters)?;
 
     for &letters in &["koetsje", "mdjenj*"] {
         let t0 = Instant::now();
-        let letters = Letters::try_from(letters)?;
-        let mut results = board.calc_all_word_scores(letters);
+        let mut results = board.calc_all_word_scores(letters)?;
         let dt = t0.elapsed();
         println!(
             "Calc all word scores with {}: {} results in {:?}",
@@ -47,13 +45,20 @@ fn run() -> Result<()> {
         );
         // find the best 20 results
         results.sort_by(|a, b| (b.4).cmp(&a.4));
-        for &(x, y, hor, word, score) in results.iter().take(20) {
-            println!("({}, {}, {}, \"{}\", {}", x, y, hor, word, score);
+        for (x, y, hor, word, score) in results.into_iter().take(20) {
+            println!(
+                "({}, {}, {}, \"{}\", {}",
+                x,
+                y,
+                hor,
+                board.decode(word),
+                score
+            );
         }
     }
     // Play a word
     let mut board = board;
-    board.play_word(Word::try_from("jokert")?, 0, 2, true, true)?;
+    board.play_word("jokert", 0, 2, true, true)?;
     println!("{}", board);
     Ok(())
 }

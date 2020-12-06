@@ -17,25 +17,18 @@
 //!
 //! # Basic usage
 //!  ```
-//! # use std::convert::TryFrom;
-//! # use wordfeud_solver::{Board, Word, Letters, Error};
+//! # use wordfeud_solver::{Board, Error};
 //! let mut board = Board::default().with_wordlist_from_words(&["rust", "rest"])?;
-//! let letters = Letters::try_from("rusta")?;
-//! let results = board.calc_all_word_scores(letters);
+//! let results = board.calc_all_word_scores("rusta")?;
 //! assert_eq!(results.len(),8);
 //! for (x,y,horizontal,word,score) in results {
-//!        println!("{} {} {} {} {}", x, y, horizontal, word, score);
+//!        println!("{} {} {} {} {}", x, y, horizontal, board.decode(word), score);
 //!}
-//! let word =  Word::try_from("rust")?;
-//! board.play_word(word, 7, 7, true, true)?;
+//! board.play_word("rust", 7, 7, true, true)?;
 //! println!("{}", board);
 //! # Ok::<(), Error>(())
 //! ```
-//!
-//! # About implementation
-//!
 mod board;
-mod codec;
 mod error;
 mod grid;
 mod labelset;
@@ -43,9 +36,10 @@ mod tiles;
 mod tilesets;
 mod wordlist;
 
-pub use board::Board;
-pub use codec::Codec;
-pub use error::Error;
-pub use tiles::{Row, Tile, Tiles};
-pub use tilesets::{Language, TileSet};
-pub use wordlist::{Letters, RowData, Word, Wordlist};
+pub use crate::board::Board;
+pub use crate::error::Error;
+pub use crate::tiles::{
+    Cell, Code, Codec, Item, ItemList, Label, Letter, Letters, List, Row, Tile, Word,
+};
+pub use crate::tilesets::Language;
+pub use crate::wordlist::{RowData, Wordlist};

@@ -1,4 +1,3 @@
-use crate::codec::Label;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -17,12 +16,14 @@ pub enum Error {
     WordfileDeserializeError(String),
 
     /// Error when encoding a word to tile labels
+    #[error("Encoder: string too long {0}")]
+    EncodeStringTooLong(String),
     #[error("Encoder: invalid token '{0}'")]
-    EncodeError(String),
-
-    /// Error when decoding an invalid label
-    #[error("Decode: invalid code {0}")]
-    DecodeError(Label),
+    EncodeInvalidToken(String),
+    #[error("Invalid code for tile {0}")]
+    InvalidTileCode(u8),
+    #[error("Invalid code for letter {0}")]
+    InvalidLetterCode(u8),
 
     /// Error parsing board state or grid from strings
     #[error("Invalid number of rows {0} (expect 15)")]

@@ -1,6 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use std::convert::TryFrom;
-use wordfeud_solver::{Board, Language, Letters};
+use wordfeud_solver::{Board, Language};
 
 const WORDFILE: &str = "../wordfeud/wordlists/wordlist-nl.txt";
 // TODO use different (generated) boards
@@ -29,10 +28,9 @@ fn bench_calc_all_word_scores(c: &mut Criterion, name: &str, letters: &str) {
         .with_state_from_strings(&TEST_STATE)
         .unwrap();
 
-    let letters = Letters::try_from(letters).unwrap();
     c.bench_function(&format!("board.{}", name), |b| {
         b.iter(|| {
-            let mut results = board.calc_all_word_scores(letters);
+            let mut results = board.calc_all_word_scores(letters).unwrap();
             results.sort_by(|a, b| (b.4).cmp(&a.4));
         })
     });

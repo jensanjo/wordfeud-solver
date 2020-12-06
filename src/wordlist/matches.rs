@@ -1,6 +1,6 @@
 use crate::labelset::LabelSet;
-use crate::tiles::{Row, Tile, Tiles};
-use crate::wordlist::{Letters, RowData, Word, Wordlist, N};
+use crate::tiles::{Cell, Letters, List, Row, Tile, Word, DIM};
+use crate::wordlist::{RowData, Wordlist};
 use std::collections::VecDeque;
 use std::iter::Iterator;
 
@@ -17,7 +17,7 @@ struct Args {
     node: usize,
     pos: usize,
     letters: Letters,
-    word: Tiles,
+    word: Word,
     next: Option<Tile>,
     connecting: bool,
     extending: bool,
@@ -35,7 +35,7 @@ impl<'a> Iterator for Matches<'a> {
             if pos == self.row.len() {
                 return self.next();
             };
-            if let Some(tile) = self.row[pos] {
+            if let Some(tile) = self.row[pos].tile() {
                 if let Some(child) = self.wordlist.get(node, tile.label()) {
                     self.child_iter.push_back(Args {
                         node: child,
@@ -84,7 +84,7 @@ impl<'a> Iterator for Matches<'a> {
                                     pos: pos + 1,
                                     letters: next_letters,
                                     word: args.word, //.append(letter),
-                                    next: Some(letter),
+                                    next: Some(Tile::from_letter(letter)),
                                     connecting: args.connecting || *connected,
                                     extending: true,
                                 });
@@ -148,20 +148,20 @@ impl Wordlist {
         maxdist: Option<usize>,
     ) -> impl Iterator<Item = (usize, Word)> + 'a {
         let mut row = *row;
-        row.push(None); //.append(None); // extend row with an empty square
+        row.push(Cell::EMPTY); // extend row with an empty square
 
         // calculate possible start locations in row
         let maxdist = maxdist.unwrap_or_else(|| letters.len());
         let mut indices = Vec::new();
         for pos in 0..row.len() {
-            if pos > 0 && row[pos - 1].is_some() {
+            if pos > 0 && !row[pos - 1].is_empty() {
                 continue;
             }
             // find next connected
             let dist = rowdata[pos..]
                 .iter()
                 .position(|(_, connected)| *connected)
-                .unwrap_or(N);
+                .unwrap_or(DIM);
             if dist > maxdist {
                 continue;
             }
@@ -176,14 +176,14 @@ impl Wordlist {
 
     /// Return a set of characters that go in the first empty position in `word`
     pub fn get_legal_characters(&self, word: &Row) -> LabelSet {
-        if word.is_empty() {
+        if word.is_empty_cell() {
             self.all_labels
         } else {
             let mut chars = LabelSet::new();
-            if let Some(i) = word.iter().position(|&t| t.is_none()) {
+            if let Some(i) = word.iter().position(|t| t.is_empty()) {
                 let rowdata = self.connected_row(word);
                 let mut row = *word;
-                row.push(None);
+                row.push(Cell::EMPTY);
                 let letters = Letters::blank();
                 let matches = self.matches(0, row, &rowdata, 0, &letters);
                 for m in matches {
@@ -201,7 +201,7 @@ impl Wordlist {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::codec::Codec;
+    use crate::Codec;
     use std::collections::HashSet;
     use std::convert::TryFrom;
 
@@ -212,13 +212,13 @@ mod test {
     ];
 
     fn test_match_helper(letters: &str, row: &str, pos: usize, expected: &[&str]) -> Result<()> {
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
-        let row = Row::try_from(row)?;
+        let codec = Codec::default();
+        let wordlist = Wordlist::from_words(WORDS, &codec).unwrap();
+        let row = Row::try_from(codec.encode(row)?)?;
         let rowdata: RowData = wordlist.connected_row(&row);
-        let letters = Letters::try_from(letters)?;
+        let letters = Letters::try_from(codec.encode(letters)?)?;
         let words = wordlist.matches(0, row, &rowdata, pos, &letters);
-        let words: Vec<String> = words.map(|w| w.to_string()).collect();
-        println!("{:?}", words);
+        let words: Vec<String> = words.map(|w| wordlist.decode(w)).collect();
         assert_eq!(words, expected);
         Ok(())
     }
@@ -262,15 +262,15 @@ mod test {
         let all_labels: Vec<u8> = wordlist.all_labels.iter().collect();
         assert_eq!(all_labels, vec![1, 2, 5, 6, 8, 9, 12, 15, 18, 19, 20]);
 
-        let row = Row::try_from("    t     c   f")?;
+        let row: Row = wordlist.encode("    t     c   f")?;
         let rowdata = wordlist.connected_row(&row);
-        let letters = Letters::try_from("ab*")?;
+        let letters: Letters = wordlist.encode("ab*")?;
 
         let words = wordlist
             .words(&row, &rowdata, &letters, None)
             .collect::<Vec<_>>();
         for (pos, word) in words.iter() {
-            println!("{} {}", pos, word);
+            println!("{} {}", pos, wordlist.decode(*word));
         }
 
         assert_eq!(words.len(), 24);
@@ -303,7 +303,7 @@ mod test {
         let expected = expected.iter().collect::<HashSet<_>>();
 
         for (i, w) in words.into_iter() {
-            let s = w.to_string();
+            let s = wordlist.decode(w);
             let m = (i, s.as_str());
             assert!(expected.contains(&m));
         }
@@ -313,9 +313,11 @@ mod test {
     #[test]
     fn test_get_legal_characters() -> Result<()> {
         let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
-        let word = Row::try_from(" ")?;
+        let word: Row = wordlist.encode(" ")?;
         let lc = wordlist.get_legal_characters(&word);
-        assert_eq!(lc.to_string(), "abefhilorst");
+        let codes: Vec<_> = lc.iter().collect();
+        let word: Word = Word::try_from(codes)?;
+        assert_eq!(wordlist.decode(word), "abefhilorst");
         Ok(())
     }
 }
