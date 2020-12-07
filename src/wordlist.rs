@@ -17,12 +17,6 @@ use tinyvec::ArrayVec;
 /// A set of letters
 pub type LetterSet = LabelSet;
 
-/// `Tiles` that form a word. Can contain wildcards (assigned blanks).
-// pub type Word = Tiles;
-
-/// `Tiles` that can be used to make a word. Can contain blanks (unassigned wildcard).
-// pub type Letters = Tiles;
-
 /// The dimension of wordfeud board: N x N squares
 pub const N: usize = 15;
 
@@ -258,9 +252,13 @@ mod test {
         "af", "ah", "al", "aar", "aas", "bi", "bo", "bar", "bes", "bel", "belt",
     ];
 
+    fn test_wordlist() -> Wordlist {
+        Wordlist::from_words(WORDS, &Codec::default()).unwrap()
+    }
+
     #[test]
     fn test_range() {
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
+        let wordlist = test_wordlist();
         println!("{:?}", wordlist);
         assert_eq!(wordlist.word_count, 11);
         assert_eq!(wordlist.node_count, 17);
@@ -271,28 +269,17 @@ mod test {
 
     #[test]
     fn test_terminal() {
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
+        let wordlist = test_wordlist();
         assert!(wordlist.terminal[4]);
         assert!(!wordlist.terminal[0]);
     }
 
     #[test]
-    fn test_iter_children() {
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
-        for (label, i) in wordlist.iter_children(1) {
-            println!("{} {}", i, label);
-        }
-    }
-
-    #[test]
     fn test_is_word() {
-        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
+        let wordlist = test_wordlist();
         for &word in WORDS {
             let w: Word = wordlist.encode(word).unwrap();
             assert!(wordlist.is_word(w.codes()));
         }
-        // for word in &["", "be", "xyzzy"] {
-        //     assert!(!wordlist.is_word(wordlist.encode(word).unwrap()));
-        // }
-    }
+      }
 }

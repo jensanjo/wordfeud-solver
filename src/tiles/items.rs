@@ -69,6 +69,15 @@ impl Row {
         }
         row
     }
+
+    /// Create a row of `len` empty cells
+    ///
+    /// ## Panics
+    /// if len > DIM
+    pub fn empty_row(len: usize) -> Row {
+        let inner: Items<Cell> = (0..len).into_iter().map(|_| Cell::EMPTY).collect();
+        ItemList::<Cell>(inner)
+    }
 }
 
 impl From<&Row> for Word {
