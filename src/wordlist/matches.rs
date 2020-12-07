@@ -41,7 +41,7 @@ impl<'a> Iterator for Matches<'a> {
                         node: child,
                         pos: pos + 1,
                         letters: args.letters,
-                        word: args.word, //.append(tile),
+                        word: args.word,
                         next: Some(tile),
                         connecting: true,
                         extending: args.extending,
@@ -68,7 +68,7 @@ impl<'a> Iterator for Matches<'a> {
                                         node: child,
                                         pos: pos + 1,
                                         letters: next_letters,
-                                        word: args.word, //.append(tile),
+                                        word: args.word,
                                         next: Some(tile),
                                         connecting: args.connecting || *connected,
                                         extending: true,
@@ -83,7 +83,7 @@ impl<'a> Iterator for Matches<'a> {
                                     node: child,
                                     pos: pos + 1,
                                     letters: next_letters,
-                                    word: args.word, //.append(letter),
+                                    word: args.word,
                                     next: Some(Tile::from_letter(letter)),
                                     connecting: args.connecting || *connected,
                                     extending: true,
@@ -107,7 +107,7 @@ impl<'a> Iterator for Matches<'a> {
 
 impl<'a> Matches<'a> {
     fn new(wordlist: &'a Wordlist, row: Row, rowdata: &'a RowData, args: Args) -> Matches<'a> {
-        let mut child_iter = VecDeque::new();
+        let mut child_iter = VecDeque::with_capacity(16);
         child_iter.push_back(args);
         Matches {
             wordlist,
