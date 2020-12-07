@@ -1,0 +1,17 @@
+[package]
+name = "pywordfeud"
+version = "0.2.2"
+authors = ["Joep Jansen <joep.w.jansen@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+wordfeud-solver = { path = "../lib" }
+
+[dependencies.pyo3]
+version = "0.12.4"
+features = ["extension-module"]
+
+[lib]
+name = "pywordfeud"
+path = "src/lib.rs"
+crate-type = ["cdylib"]

@@ -172,7 +172,7 @@ impl<'a> Board<'a> {
     /// ];
     /// let board = Board::default().with_state_from_strings(state);
     /// ```
-    pub fn with_state_from_strings(mut self, rows: &[&str]) -> Result<Board<'a>, Error> {
+    pub fn state_from_strings(&mut self, rows: &[&str]) -> Result<State, Error> {
         if rows.len() != N {
             return Err(Error::InvalidRowCount(rows.len()));
         }
@@ -183,12 +183,19 @@ impl<'a> Board<'a> {
             }
             state[i] = self.wordlist.encode(row)?;
         }
+        Ok(state)
+    }
+
+    /// Set board state from list of strings
+    pub fn with_state_from_strings(mut self, rows: &[&str]) -> Result<Board<'a>, Error> {
+        let state = self.state_from_strings(rows)?;
         self.set_state(&state);
         Ok(self)
     }
 
+
     /// Set board state from a list of rows, update rowdata
-    fn set_state(&mut self, rows: &State) {
+    pub fn set_state(&mut self, rows: &State) {
         self.horizontal = *rows;
         for i in 0..N {
             for j in 0..N {
@@ -211,9 +218,19 @@ impl<'a> Board<'a> {
         &self.wordlist
     }
 
-    /// Return the board state
+    /// Return the board horizontal state
     pub fn horizontal(&self) -> State {
         self.horizontal
+    }
+
+    /// Return the board vertical state
+    pub fn vertical(&self) -> State {
+        self.vertical
+    }
+
+    /// Return the grid
+    pub fn grid(&self) -> Grid {
+        self.board
     }
 
     /// Check if cell at x, y is occupied.

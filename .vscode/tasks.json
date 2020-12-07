@@ -9,6 +9,15 @@
 			],
 			"group": "build",
 			"label": "rust: cargo check"
+		},
+		{
+			"type": "cargo",
+			"command": "build",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "rust: cargo build"
 		}
 	]
 }

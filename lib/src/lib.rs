@@ -43,3 +43,4 @@ pub use crate::tiles::{
 };
 pub use crate::tilesets::Language;
 pub use crate::wordlist::{RowData, Wordlist};
+pub use crate::grid::{Grid, as_array};
