@@ -1,4 +1,5 @@
 /target
+lib/target
 Cargo.lock
 TODO.md
 wordlists/wordlist-nl.txt

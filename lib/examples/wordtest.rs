@@ -24,9 +24,9 @@ fn run() -> Result<()> {
     let t0 = Instant::now();
     #[cfg(feature = "bincode")]
     let board =
-        Board::new(Language::NL).with_wordlist_deserialize_from("wordlists/wordlist-nl.bin")?;
+        Board::new(Language::NL).with_wordlist_deserialize_from("../wordlists/wordlist-nl.bin")?;
     #[cfg(not(feature = "bincode"))]
-    let board = Board::new(Language::NL).with_wordlist_from_file("wordlists/wordlist-nl.txt")?;
+    let board = Board::new(Language::NL).with_wordlist_from_file("../wordlists/wordlist-nl.txt")?;
     let board = board.with_state_from_strings(&TEST_STATE)?;
     let dt = t0.elapsed();
     println!("Create board with wordlist took {:?}", dt);

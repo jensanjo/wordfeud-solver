@@ -109,7 +109,7 @@ impl<'a> Board<'a> {
     /// ## Examples
     /// ```
     /// # use wordfeud_solver::{Board, Error};
-    /// let board = Board::default().with_wordlist_from_file("wordlists/words.txt")?;
+    /// let board = Board::default().with_wordlist_from_file("../wordlists/words.txt")?;
     /// # Ok::<(), Error>(())
     /// ```
     pub fn with_wordlist_from_file(mut self, wordfile: &str) -> Result<Board<'a>, Error> {
