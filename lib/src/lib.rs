@@ -38,9 +38,9 @@ mod wordlist;
 
 pub use crate::board::Board;
 pub use crate::error::Error;
+pub use crate::grid::Grid;
 pub use crate::tiles::{
     Cell, Code, Codec, Item, ItemList, Label, Letter, Letters, List, Row, Tile, Word,
 };
 pub use crate::tilesets::Language;
 pub use crate::wordlist::{RowData, Wordlist};
-pub use crate::grid::{Grid, as_array};

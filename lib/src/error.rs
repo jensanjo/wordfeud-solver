@@ -15,13 +15,19 @@ pub enum Error {
     #[error("Wordfile {0} could not be deserialized")]
     WordfileDeserializeError(String),
 
-    /// Error when encoding a word to tile labels
+    /// The string is longer than 15 tokens
     #[error("Encoder: string too long {0}")]
     EncodeStringTooLong(String),
+
+    /// Token can not be encoded
     #[error("Encoder: invalid token '{0}'")]
     EncodeInvalidToken(String),
+
+    /// Code is not valid for `Tile` or `Cell`
     #[error("Invalid code for tile {0}")]
     InvalidTileCode(u8),
+
+    /// Code is not valid for `Letter`
     #[error("Invalid code for letter {0}")]
     InvalidLetterCode(u8),
 

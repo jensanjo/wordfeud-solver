@@ -281,5 +281,5 @@ mod test {
             let w: Word = wordlist.encode(word).unwrap();
             assert!(wordlist.is_word(w.codes()));
         }
-      }
+    }
 }

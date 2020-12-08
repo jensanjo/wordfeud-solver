@@ -1,5 +1,4 @@
 use crate::grid::{
-    self,
     Cell::{LetterBonus, WordBonus},
     Grid,
 };
@@ -81,7 +80,7 @@ impl<'a> Board<'a> {
         let tileset = TileSet::new(language);
         // Creating an empty wordlist never fails, so it safe to unwrap
         let wordlist = Wordlist::from_words(&[], tileset.codec()).unwrap();
-        let grid = grid::default();
+        let grid = Grid::default();
         let empty_row = wordlist.encode("               ").unwrap();
         let mut empty_rowdata = RowData::new();
         for _ in 0..N {
@@ -193,7 +192,6 @@ impl<'a> Board<'a> {
         Ok(self)
     }
 
-
     /// Set board state from a list of rows, update rowdata
     pub fn set_state(&mut self, rows: &State) {
         self.horizontal = *rows;
@@ -208,8 +206,8 @@ impl<'a> Board<'a> {
     /// Set board cells from string representation
     /// ## Errors
     /// If the grid has wrong dimensions or cannot be parsed as valid board cells.
-    pub fn with_grid_from_strings(mut self, grid: Vec<Vec<String>>) -> Result<Board<'a>, Error> {
-        self.board = grid::from_array(&grid)?;
+    pub fn with_grid_from_strings<S: AsRef<str>>(mut self, grid: &[S]) -> Result<Board<'a>, Error> {
+        self.board = Grid::from_strings(grid)?;
         Ok(self)
     }
 
@@ -230,7 +228,7 @@ impl<'a> Board<'a> {
 
     /// Return the grid
     pub fn grid(&self) -> Grid {
-        self.board
+        self.board.clone()
     }
 
     /// Check if cell at x, y is occupied.

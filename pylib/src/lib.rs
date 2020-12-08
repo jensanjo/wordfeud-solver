@@ -1,10 +1,11 @@
 use pyo3::{basic::PyObjectProtocol, exceptions::PyException, prelude::*, PyErr};
 use pyo3::create_exception;
 use std::convert::From;
-use wordfeud_solver::{as_array, Language};
+use wordfeud_solver::Language;
 
 create_exception!(pywordfeud, WordfeudException, PyException);
 
+/// Score as returned to python
 type Score = (usize, usize, bool, String, u32);
 
 #[pyclass]
@@ -20,7 +21,7 @@ impl Board {
         lang: &str,
         wordfile: Option<&str>,
         state: Option<Vec<&str>>,
-        grid: Option<Vec<Vec<String>>>,
+        grid: Option<Vec<&str>>,
     ) -> PyResult<Self> {
         let language = match lang {
             "NL" => Ok(Language::NL),
@@ -44,7 +45,7 @@ impl Board {
         }
         if let Some(grid) = grid {
             board = board
-                .with_grid_from_strings(grid)
+                .with_grid_from_strings(&grid)
                 .map_err(WordfeudError::from)?;
         }
         Ok(Board { _board: board })
@@ -60,8 +61,8 @@ impl Board {
     }
 
     #[getter]
-    fn get_board(&self) -> Vec<Vec<String>> {
-        as_array(&self._board.grid())
+    fn get_board(&self) -> Vec<String> {
+        self._board.grid().to_strings()
     }
 
     #[getter]
@@ -132,6 +133,7 @@ impl Board {
     }
 }
 
+/// Wrapper around wordfeud_solver::Error so we convert to PyErr
 struct WordfeudError(wordfeud_solver::Error);
 
 impl From<wordfeud_solver::Error> for WordfeudError {
