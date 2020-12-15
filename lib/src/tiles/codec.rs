@@ -41,6 +41,7 @@ impl CodeSet {
             encoder.insert(String::from(*s).to_uppercase(), (i + n + 1) as u8 | BLANK);
         }
         encoder.insert(String::from(" "), EMPTY);
+        encoder.insert(String::from("."), EMPTY);
         encoder.insert(String::from("*"), BLANK);
 
         let mut decoder = [NOCODE; NCODE];

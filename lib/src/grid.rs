@@ -164,11 +164,12 @@ impl Grid {
         }
         let mut board = Grid::empty();
         for (i, row) in grid.iter().enumerate() {
-            let row: Vec<&str> = row.as_ref().split(' ').collect();
-            if row.len() != N {
-                return Err(Error::InvalidRowLength(row.len()));
+            let row = row.as_ref();
+            let cells: Vec<&str> = row.split(' ').collect();
+            if cells.len() != N {
+                return Err(Error::InvalidRowLength(String::from(row), cells.len()));
             }
-            for (j, &cell) in row.iter().enumerate() {
+            for (j, &cell) in cells.iter().enumerate() {
                 let val = cell.parse()?;
                 board[i][j] = val;
             }

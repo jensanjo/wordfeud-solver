@@ -36,8 +36,8 @@ pub enum Error {
     InvalidRowCount(usize),
 
     /// Parsing a row on the board needs 15 cells
-    #[error("Invalid row length {0} (expect 15)")]
-    InvalidRowLength(usize),
+    #[error("Invalid row \"{0}\": length {1}, expect 15")]
+    InvalidRowLength(String, usize),
 
     /// Error parsing bonus cell
     #[error("Invalid grid bonus cell: \"{0}\"")]

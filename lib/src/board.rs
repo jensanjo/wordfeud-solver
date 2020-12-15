@@ -177,10 +177,11 @@ impl<'a> Board<'a> {
         }
         let mut state = [Row::new(); N];
         for (i, &row) in rows.iter().enumerate() {
-            if row.len() != N {
-                return Err(Error::InvalidRowLength(row.len()));
+            let encoded = self.wordlist.encode(row)?;
+            if encoded.len() != N {
+                return Err(Error::InvalidRowLength(String::from(row),encoded.len()));
             }
-            state[i] = self.wordlist.encode(row)?;
+            state[i] = encoded;
         }
         Ok(state)
     }
