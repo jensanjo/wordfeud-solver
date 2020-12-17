@@ -603,7 +603,7 @@ mod tests {
         assert!(board.is_occupied(14, 4));
 
         board.play_word("ster", 3, 0, true, true)?;
-        assert_eq!(board.decode(board.horizontal[0]), "   ster   c   f");
+        assert_eq!(board.decode(board.horizontal[0]), "...ster...c...f");
         Ok(())
     }
 
@@ -616,8 +616,8 @@ mod tests {
             .map(|&s| board.decode(s))
             .collect::<Vec<String>>();
         let expect = [
-            " ", " ", " ", " ", " ", "schut", "plas ", "paddos", "o ", "e we", "drel en", "tienen",
-            "gemeen ", " ", " ",
+            ".", ".", ".", ".", ".", "schut", "plas.", "paddos", "o.", "e.we", "drel.en", "tienen",
+            "gemeen.", ".", ".",
         ];
         println!("{:?}", expect);
         assert_eq!(sw, expect);

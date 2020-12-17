@@ -1,4 +1,5 @@
 // use crate::codec;
+#[cfg(feature = "bitintr")]
 use bitintr::{Bzhi, Popcnt};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -8,6 +9,31 @@ use std::iter::FromIterator;
 use std::iter::Iterator;
 
 pub type Label = u8;
+
+#[cfg(feature = "bitintr")] 
+#[inline(always)]
+fn count_ones(n: u32) -> u32 {
+    n.popcnt()
+}
+
+#[cfg(not(feature = "bitintr"))] 
+#[inline(always)]
+fn count_ones(n: u32) -> u32 {
+    n.count_ones()
+}
+
+#[cfg(feature = "bitintr")] 
+#[inline(always)]
+fn zero_highbits(n: u32, v: u32) -> u32 {
+    n.bzhi(v)
+}
+
+#[cfg(not(feature = "bitintr"))] 
+#[inline(always)]
+fn zero_highbits(n: u32, v: u32) -> u32 {
+    n & ((1<<v) - 1)
+}
+
 
 /// A bitset representing labels present in a `wordlist` node
 #[derive(Clone, Copy, Default)]
@@ -32,8 +58,10 @@ impl LabelSet {
         r
     }
 
+   
     pub fn len(&self) -> usize {
-        self.0.popcnt() as usize
+        // self.0.popcnt() as usize
+        count_ones(self.0) as usize
     }
 
     pub fn is_empty(&self) -> bool {
@@ -50,9 +78,11 @@ impl LabelSet {
             return None;
         }
         let v = label as u32;
-        Some(self.0.bzhi(v).popcnt() as usize)
+        // Some(self.0.bzhi(v).popcnt() as usize)
+        Some(count_ones(zero_highbits(self.0, v)) as usize)
     }
 }
+
 
 // impl fmt::Display for LabelSet {
 //     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -159,5 +189,19 @@ mod tests {
         let labels = LabelSet::from(vec![0u8, 1, 4, 5, 7, 8, 10, 12, 14, 15]);
         let v: Vec<u8> = labels.into();
         println!("{:?}", &v);
+    }
+
+    #[test]
+    fn test_zero_highbits() {
+        let n = 0b1111_0010_u32;
+        let s = 0b0001_0010_u32;
+        // println!("{:b}", (1 << 5) - 1);
+        // assert_eq!(n & ((1 << 5) - 1), s);
+        assert_eq!(zero_highbits(n, 5), s);
+    }
+
+    #[test]
+    fn test_count_ones() {
+        assert_eq!(count_ones(0b0101_1010u32), 4);
     }
 }

@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use wordfeud_solver::{Board, Language};
 
-const WORDFILE: &str = "../wordfeud/wordlists/wordlist-nl.txt";
+const WORDFILE: &str = "../wordlists/wordlist-nl.txt";
 // TODO use different (generated) boards
 const TEST_STATE: &[&str] = &[
     "    t     c   f",

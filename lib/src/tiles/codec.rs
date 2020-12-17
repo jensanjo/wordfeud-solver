@@ -40,7 +40,6 @@ impl CodeSet {
             encoder.insert(String::from(*s), (i + n + 1) as u8);
             encoder.insert(String::from(*s).to_uppercase(), (i + n + 1) as u8 | BLANK);
         }
-        encoder.insert(String::from(" "), EMPTY);
         encoder.insert(String::from("."), EMPTY);
         encoder.insert(String::from("*"), BLANK);
 
@@ -49,6 +48,7 @@ impl CodeSet {
             let mut it = k.chars();
             decoder[v as usize] = [it.next(), it.next()];
         }
+        encoder.insert(String::from(" "), EMPTY);   // encode both '.' and ' ' to EMPTY, but always decode to '.'
         CodeSet { encoder, decoder }
     }
 }
@@ -129,7 +129,7 @@ impl Codec {
     /// let codec = Codec::new(&["ä", "ö", "ü"]);
     /// let labels = &[1,26,65,90,27,0,64];
     /// let decoded = codec.decode(labels);
-    /// assert_eq!(decoded, &["a","z","A","Z","ä"," ", "*"]);
+    /// assert_eq!(decoded, &["a","z","A","Z","ä",".", "*"]);
     /// # Ok::<(), Error>(())
     /// ```
     pub fn decode(&self, codes: &[Code]) -> Vec<String> {

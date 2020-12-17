@@ -4,8 +4,8 @@ use wordfeud_solver::{Codec, RowData, Wordlist};
 const WORDS: &[&str] = &[
     "af", "ah", "al", "aar", "aas", "bi", "bo", "bar", "bes", "bel",
 ];
-const WORDFILE: &str = "wordlists/wordlist-nl.txt";
-const WORDFILE_SMALL: &str = "wordlists/words.txt";
+const WORDFILE: &str = "../wordlists/wordlist-nl.txt";
+const WORDFILE_SMALL: &str = "../wordlists/words.txt";
 
 fn bench_from_words() {
     let _wordlist = Wordlist::from_words(WORDS, &Codec::default());
