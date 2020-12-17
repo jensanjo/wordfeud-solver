@@ -10,30 +10,29 @@ use std::iter::Iterator;
 
 pub type Label = u8;
 
-#[cfg(feature = "bitintr")] 
+#[cfg(feature = "bitintr")]
 #[inline(always)]
 fn count_ones(n: u32) -> u32 {
     n.popcnt()
 }
 
-#[cfg(not(feature = "bitintr"))] 
+#[cfg(not(feature = "bitintr"))]
 #[inline(always)]
 fn count_ones(n: u32) -> u32 {
     n.count_ones()
 }
 
-#[cfg(feature = "bitintr")] 
+#[cfg(feature = "bitintr")]
 #[inline(always)]
 fn zero_highbits(n: u32, v: u32) -> u32 {
     n.bzhi(v)
 }
 
-#[cfg(not(feature = "bitintr"))] 
+#[cfg(not(feature = "bitintr"))]
 #[inline(always)]
 fn zero_highbits(n: u32, v: u32) -> u32 {
-    n & ((1<<v) - 1)
+    n & ((1 << v) - 1)
 }
-
 
 /// A bitset representing labels present in a `wordlist` node
 #[derive(Clone, Copy, Default)]
@@ -58,7 +57,6 @@ impl LabelSet {
         r
     }
 
-   
     pub fn len(&self) -> usize {
         // self.0.popcnt() as usize
         count_ones(self.0) as usize
@@ -82,7 +80,6 @@ impl LabelSet {
         Some(count_ones(zero_highbits(self.0, v)) as usize)
     }
 }
-
 
 // impl fmt::Display for LabelSet {
 //     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

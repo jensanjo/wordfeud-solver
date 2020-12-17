@@ -48,7 +48,7 @@ impl CodeSet {
             let mut it = k.chars();
             decoder[v as usize] = [it.next(), it.next()];
         }
-        encoder.insert(String::from(" "), EMPTY);   // encode both '.' and ' ' to EMPTY, but always decode to '.'
+        encoder.insert(String::from(" "), EMPTY); // encode both '.' and ' ' to EMPTY, but always decode to '.'
         CodeSet { encoder, decoder }
     }
 }

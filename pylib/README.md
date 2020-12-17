@@ -1,23 +1,23 @@
-# The `pywordfeud` Python package
+# The `pywordfeud-solver` Python package
 
-The `pywordfeud` package is a python wrapper for the Rust [wordfeud-solver](https://github.com/jensanjo/wordfeud-solver) crate.
+The `pywordfeud-solver` package is a python wrapper for the Rust [wordfeud-solver](https://github.com/jensanjo/wordfeud-solver) crate.
 
 ## Installation
 
 ```
-pip install pywordfeud
+pip install pywordfeud-solver
 ```
 
-In addition to `pywordfeud` you will need a wordfeud wordlist for the language(s) you want to use.
+In addition to `pywordfeud-solver` you will need a wordfeud wordlist for the language(s) you want to use.
 
 ## Usage
 
 Here is an example:
 
 ```python
-import pywordfeud
+from pywordfeud_solver import Board
 # create a board for dutch wordfeud with `wordfile`
-board = pywordfeud.Board("NL", wordfile="wordlists/wordlist-nl.txt")
+board = Board("NL", wordfile="wordlists/wordlist-nl.txt")
 # put a first word on the board
 board.play_word("hulpen", 7,7, True, True)
 # calculate the 20 best scores with given letters

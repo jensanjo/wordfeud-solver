@@ -3,7 +3,7 @@ use pyo3::create_exception;
 use std::convert::From;
 use wordfeud_solver::Language;
 
-create_exception!(pywordfeud, WordfeudException, PyException);
+create_exception!(pywordfeud_solver, WordfeudException, PyException);
 
 /// Score as returned to python
 type Score = (usize, usize, bool, String, u32);
@@ -156,7 +156,7 @@ impl PyObjectProtocol for Board {
 }
 
 #[pymodule]
-fn pywordfeud(_py: Python, m: &PyModule) -> PyResult<()> {
+fn pywordfeud_solver(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Board>()?;
     Ok(())
 }
