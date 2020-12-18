@@ -179,7 +179,7 @@ impl<'a> Board<'a> {
         for (i, &row) in rows.iter().enumerate() {
             let encoded = self.wordlist.encode(row)?;
             if encoded.len() != N {
-                return Err(Error::InvalidRowLength(String::from(row),encoded.len()));
+                return Err(Error::InvalidRowLength(String::from(row), encoded.len()));
             }
             state[i] = encoded;
         }
@@ -305,9 +305,29 @@ impl<'a> Board<'a> {
         horizontal: bool,
         modify: bool,
     ) -> Result<String, Error> {
+        let word = self.encode(word)?;
+        let used_letters = self.try_word(word, x, y, horizontal)?;
+        if modify {
+            self.play_word_unchecked(word, x, y, horizontal);
+        }
+        Ok(self.decode(used_letters))
+    }
+
+    fn play_word_unchecked(&mut self, word: Word, x: usize, y: usize, horizontal: bool) {
         let mut x = x;
         let mut y = y;
-        let word = self.encode(word)?;
+        let (dx, dy) = if horizontal { (1, 0) } else { (0, 1) };
+        for tile in word {
+            self.horizontal[y][x] = tile.into_cell();
+            x += dx;
+            y += dy;
+        }
+        self.set_state(&self.horizontal.clone());
+    }
+
+    fn try_word(&self, word: Word, x: usize, y: usize, horizontal: bool) -> Result<Letters, Error> {
+        let mut x = x;
+        let mut y = y;
         let len = word.len();
         let (dx, dy) = if horizontal { (1, 0) } else { (0, 1) };
         if (x + len * dx > N) || (y + len * dy > N) {
@@ -326,14 +346,10 @@ impl<'a> Board<'a> {
             } else if c.tile() != Some(tile) {
                 return Err(Error::TileReplaceError { x, y });
             }
-            if modify {
-                self.horizontal[y][x] = tile.into_cell();
-            }
             x += dx;
             y += dy;
         }
-        self.set_state(&self.horizontal.clone());
-        Ok(self.decode(used_letters))
+        Ok(used_letters)
     }
 
     /// Returns the the surrounding characters that would need to form a valid
@@ -516,7 +532,8 @@ impl<'a> Board<'a> {
             }
             scores
         };
-        #[cfg(feature = "rayon")]
+        // #[cfg(feature = "rayon")]
+        #[cfg(feature = "calc_all_word_scores_parallel")]
         {
             scores.par_extend(
                 self.horizontal
@@ -533,7 +550,8 @@ impl<'a> Board<'a> {
                     .flatten(),
             );
         }
-        #[cfg(not(feature = "rayon"))]
+        // #[cfg(not(feature = "rayon"))]
+        #[cfg(not(feature = "calc_all_word_scores_parallel"))]
         {
             scores.extend(self.horizontal.iter().enumerate().map(hor_scores).flatten());
             scores.extend(self.vertical.iter().enumerate().map(ver_scores).flatten());
@@ -564,11 +582,73 @@ impl<'a> Board<'a> {
     pub fn decode<T: Item>(&self, word: ItemList<T>) -> String {
         self.wordlist.decode(word)
     }
+
+    // fn find_opponent_score(&self, our_tile_score: u32, letters: opp_words:Letters, in_endgame)
+
+    fn evaluate_opponent_scores(
+        &self,
+        letters: &str,
+        our_tile_score: u32,
+        in_endgame: bool,
+    ) -> Result<(u32, bool), Error> {
+        let mut exit_flag = false;
+        let mut result = self.calc_all_word_scores(letters)?;
+        if !in_endgame {
+            result.sort_by(|a, b| (b.4).cmp(&a.4));
+            // let (x,y,horizontal,word,score) = result[0];
+            // println!("best opp score with \"{}\": {} {} {} {} {}", letters, x, y, horizontal, self.decode(word), score);
+            return Ok((result[0].4, exit_flag));
+        }
+        let mut scores = vec![0];
+        for (x, y, horizontal, word, score) in result {
+            let played = self.try_word(word, x, y, horizontal)?;
+            let score = if played.len() == letters.len() {
+                exit_flag = true;
+                score + our_tile_score
+            } else {
+                score
+            };
+            scores.push(score);
+        }
+        scores.sort_by_key(|n| u32::MAX - n);
+
+        Ok((scores[0], exit_flag))
+    }
+
+    /// calculate word scores for a list of racks
+    #[cfg(not(feature = "rayon"))]
+    pub fn sample_scores(
+        &mut self,
+        racks: &[&str],
+        our_tile_score: u32,
+        in_endgame: bool,
+    ) -> Result<Vec<(u32, bool)>, Error> {
+        let opp_scores = racks
+            .iter()
+            .map(|&letters| self.evaluate_opponent_scores(letters, our_tile_score, in_endgame))
+            .collect::<Result<Vec<_>, Error>>();
+        opp_scores
+    }
+
+    #[cfg(feature = "rayon")]
+    pub fn sample_scores(
+        &self,
+        racks: &[&str],
+        our_tile_score: u32,
+        in_endgame: bool,
+    ) -> Result<Vec<(u32, bool)>, Error> {
+        let opp_scores = racks
+            .par_iter()
+            .map(|letters| self.evaluate_opponent_scores(&letters, our_tile_score, in_endgame))
+            .collect::<Result<Vec<_>, Error>>();
+        opp_scores
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Instant;
 
     type Result<T> = std::result::Result<T, Error>;
 
@@ -741,5 +821,24 @@ mod tests {
     fn test_tile_placement_error() {
         let mut board = Board::default();
         board.play_word("rust", 12, 7, true, true).unwrap();
+    }
+
+    #[test]
+    fn test_sample_scores() -> Result<()> {
+        let board = board_nl()
+            .with_wordlist_from_file("../wordlists/wordlist-nl.txt")?
+            .with_state_from_strings(&TEST_STATE)?;
+        // let letters = "ehkmopp";
+        // board.play_word("hoppe", 7,7, true, true)?;
+        let racks = &[
+            "ddenuvw", "eeijkvy", "abeinuy", "ceeehtv", "*bjjoov", "bbeeotu", "eghknrt", "ddnosuw",
+            "aaadeln", "abeinnz", "aceeiin", "deilnoz", "eeeimmo", "eefioou", "aefnnnt", "*ejlmrr",
+            "addeent", "adgimno", "emprstt", "bceekpy",
+        ];
+        let now = Instant::now();
+        let opp_scores = board.sample_scores(racks, 0, false)?;
+        println!("took {:?}", now.elapsed());
+        println!("{:?}", opp_scores);
+        Ok(())
     }
 }

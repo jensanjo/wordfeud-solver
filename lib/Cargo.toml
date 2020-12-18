@@ -24,6 +24,7 @@ anyhow = "1.0"
 [features]
 # default = ["rayon", "serde", "bincode"]
 default = ["rayon"]
+calc_all_word_scores_parallel = []
 
 [[bench]]
 name = "bench_wordlist"

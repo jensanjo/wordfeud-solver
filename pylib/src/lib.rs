@@ -131,6 +131,12 @@ impl Board {
             .map_err(WordfeudError::from)?;
         Ok(used_letters)
     }
+
+    #[text_signature = "($self, racks, our_tile_score, in_endgame)"]
+    fn sample_scores(&self, racks: Vec<&str>, our_tile_score: u32, in_endgame: bool) ->  PyResult<Vec<(u32, bool)>> {
+        let result = self._board.sample_scores(&racks, our_tile_score, in_endgame).map_err(WordfeudError::from)?;
+        Ok(result)  
+    }
 }
 
 /// Wrapper around wordfeud_solver::Error so we convert to PyErr
