@@ -187,9 +187,15 @@ impl<'a> Board<'a> {
     }
 
     /// Set board state from list of strings
-    pub fn with_state_from_strings(mut self, rows: &[&str]) -> Result<Board<'a>, Error> {
+    pub fn set_state_from_strings(&mut self, rows: &[&str]) -> Result<(), Error> {
         let state = self.state_from_strings(rows)?;
         self.set_state(&state);
+        Ok(())
+    }
+
+    /// Set board state from list of strings
+    pub fn with_state_from_strings(mut self, rows: &[&str]) -> Result<Board<'a>, Error> {
+        self.set_state_from_strings(rows)?;
         Ok(self)
     }
 
@@ -207,8 +213,16 @@ impl<'a> Board<'a> {
     /// Set board cells from string representation
     /// ## Errors
     /// If the grid has wrong dimensions or cannot be parsed as valid board cells.
-    pub fn with_grid_from_strings<S: AsRef<str>>(mut self, grid: &[S]) -> Result<Board<'a>, Error> {
+    pub fn set_grid_from_strings<S: AsRef<str>>(&mut self, grid: &[S]) -> Result<(), Error> {
         self.board = Grid::from_strings(grid)?;
+        Ok(())
+    }
+
+    /// Set board cells from string representation
+    /// ## Errors
+    /// If the grid has wrong dimensions or cannot be parsed as valid board cells.
+    pub fn with_grid_from_strings<S: AsRef<str>>(mut self, grid: &[S]) -> Result<Board<'a>, Error> {
+        self.set_grid_from_strings(grid)?;
         Ok(self)
     }
 
@@ -230,6 +244,11 @@ impl<'a> Board<'a> {
     /// Return the grid
     pub fn grid(&self) -> Grid {
         self.board.clone()
+    }
+
+    /// Return tileset
+    pub fn tileset(&self) -> &'a TileSet {
+        &self.tileset
     }
 
     /// Check if cell at x, y is occupied.
@@ -313,7 +332,7 @@ impl<'a> Board<'a> {
         Ok(self.decode(used_letters))
     }
 
-    fn play_word_unchecked(&mut self, word: Word, x: usize, y: usize, horizontal: bool) {
+    pub fn play_word_unchecked(&mut self, word: Word, x: usize, y: usize, horizontal: bool) {
         let mut x = x;
         let mut y = y;
         let (dx, dy) = if horizontal { (1, 0) } else { (0, 1) };
@@ -585,21 +604,31 @@ impl<'a> Board<'a> {
 
     // fn find_opponent_score(&self, our_tile_score: u32, letters: opp_words:Letters, in_endgame)
 
+    /// Calculate the best opponent score with the given letters.
+    ///
+    /// The best opponent score is calculated by calling [calc_all_word_scores](Self::calc_all_word_scores) with the opponent `letters`.
+    /// In endgame (0 letters left in bag) it also checks if the opponent can finish the game by playing all his remaining letters.
+    /// In that case, `our_tile_score` is added to the best opponent score.
+    /// If the opponent has to pass because there are no  possible moves, return 0 as score.
+    /// # Errors
+    /// Returns an error if [calc_all_word_scores](Self::calc_all_word_scores) fails.
     fn evaluate_opponent_scores(
         &self,
         letters: &str,
         our_tile_score: u32,
         in_endgame: bool,
     ) -> Result<(u32, bool), Error> {
-        let mut exit_flag = false;
         let mut result = self.calc_all_word_scores(letters)?;
         if !in_endgame {
+            if result.is_empty() {
+                // no possible moves for opponent, return 0
+                return Ok((0, false));
+            }
             result.sort_by(|a, b| (b.4).cmp(&a.4));
-            // let (x,y,horizontal,word,score) = result[0];
-            // println!("best opp score with \"{}\": {} {} {} {} {}", letters, x, y, horizontal, self.decode(word), score);
-            return Ok((result[0].4, exit_flag));
+            return Ok((result[0].4, false));
         }
         let mut scores = vec![0];
+        let mut exit_flag = false;
         for (x, y, horizontal, word, score) in result {
             let played = self.try_word(word, x, y, horizontal)?;
             let score = if played.len() == letters.len() {
@@ -619,13 +648,13 @@ impl<'a> Board<'a> {
     #[cfg(not(feature = "rayon"))]
     pub fn sample_scores(
         &mut self,
-        racks: &[&str],
+        racks: &[String],
         our_tile_score: u32,
         in_endgame: bool,
     ) -> Result<Vec<(u32, bool)>, Error> {
         let opp_scores = racks
             .iter()
-            .map(|&letters| self.evaluate_opponent_scores(letters, our_tile_score, in_endgame))
+            .map(|letters| self.evaluate_opponent_scores(&letters, our_tile_score, in_endgame))
             .collect::<Result<Vec<_>, Error>>();
         opp_scores
     }
@@ -633,7 +662,7 @@ impl<'a> Board<'a> {
     #[cfg(feature = "rayon")]
     pub fn sample_scores(
         &self,
-        racks: &[&str],
+        racks: &[String],
         our_tile_score: u32,
         in_endgame: bool,
     ) -> Result<Vec<(u32, bool)>, Error> {
@@ -824,19 +853,24 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_sample_scores() -> Result<()> {
-        let board = board_nl()
+        let mut board = board_nl()
             .with_wordlist_from_file("../wordlists/wordlist-nl.txt")?
             .with_state_from_strings(&TEST_STATE)?;
         // let letters = "ehkmopp";
         // board.play_word("hoppe", 7,7, true, true)?;
-        let racks = &[
+        let racks: Vec<String> = [
             "ddenuvw", "eeijkvy", "abeinuy", "ceeehtv", "*bjjoov", "bbeeotu", "eghknrt", "ddnosuw",
             "aaadeln", "abeinnz", "aceeiin", "deilnoz", "eeeimmo", "eefioou", "aefnnnt", "*ejlmrr",
             "addeent", "adgimno", "emprstt", "bceekpy",
-        ];
+        ]
+        .iter()
+        .map(|&s| String::from(s))
+        .collect();
+
         let now = Instant::now();
-        let opp_scores = board.sample_scores(racks, 0, false)?;
+        let opp_scores = board.sample_scores(&racks, 0, false)?;
         println!("took {:?}", now.elapsed());
         println!("{:?}", opp_scores);
         Ok(())

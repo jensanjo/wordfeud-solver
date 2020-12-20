@@ -1,12 +1,34 @@
-use pyo3::{basic::PyObjectProtocol, exceptions::PyException, prelude::*, PyErr};
 use pyo3::create_exception;
+use pyo3::{basic::PyObjectProtocol, exceptions::PyException, prelude::*, PyErr};
 use std::convert::From;
-use wordfeud_solver::Language;
+use wordfeud_solver::{Language, ExitFlag};
 
 create_exception!(pywordfeud_solver, WordfeudException, PyException);
 
-/// Score as returned to python
+/// Score as returned to python: x, y, horizontal, word, score
 type Score = (usize, usize, bool, String, u32);
+
+#[pyclass]
+struct ExtScore {
+    #[pyo3(get)]
+    x: usize,
+    #[pyo3(get)]
+    y: usize,
+    #[pyo3(get)]
+    horizontal: bool,
+    #[pyo3(get)]
+    word: String,
+    #[pyo3(get)]
+    score: i32,
+    #[pyo3(get)]
+    adj_score: i32,
+    #[pyo3(get)]
+    played: String,
+    #[pyo3(get)]
+    exit_code: u32,
+    #[pyo3(get)]
+    std_opp_score: f32,
+}
 
 #[pyclass]
 struct Board {
@@ -60,6 +82,13 @@ impl Board {
         Ok(())
     }
 
+    fn set_grid(&mut self, grid: Vec<&str>) -> PyResult<()> {
+        self._board
+            .set_grid_from_strings(&grid)
+            .map_err(WordfeudError::from)?;
+        Ok(())
+    }
+
     #[getter]
     fn get_board(&self) -> Vec<String> {
         self._board.grid().to_strings()
@@ -105,13 +134,13 @@ impl Board {
             ._board
             .calc_all_word_scores(&letters)
             .map_err(WordfeudError::from)?;
-        results.sort_by(|a, b| (b.4).cmp(&a.4));    
-        Ok(results.into_iter()
+        results.sort_by(|a, b| (b.4).cmp(&a.4));
+        Ok(results
+            .into_iter()
             .take(n)
             .map(|(x, y, hor, word, score)| (x, y, hor, self._board.decode(word), score))
             .collect())
     }
-    
 
     #[text_signature = "($self, word, x, y, horizontal, modify)"]
     #[args(modify = "true")]
@@ -133,9 +162,35 @@ impl Board {
     }
 
     #[text_signature = "($self, racks, our_tile_score, in_endgame)"]
-    fn sample_scores(&self, racks: Vec<&str>, our_tile_score: u32, in_endgame: bool) ->  PyResult<Vec<(u32, bool)>> {
-        let result = self._board.sample_scores(&racks, our_tile_score, in_endgame).map_err(WordfeudError::from)?;
-        Ok(result)  
+    fn sample_scores(
+        &mut self,
+        racks: Vec<String>,
+        our_tile_score: u32,
+        in_endgame: bool,
+    ) -> PyResult<Vec<(u32, bool)>> {
+        let result = self
+            ._board
+            .sample_scores(&racks, our_tile_score, in_endgame)
+            .map_err(WordfeudError::from)?;
+        Ok(result)
+    }
+
+    fn find_best_score(&mut self, rack: &str, nsamples: usize) -> PyResult<Vec<ExtScore>> {
+        let rack = self._board.encode(rack).map_err(WordfeudError::from)?;
+        let scores = wordfeud_solver::find_best_score(&mut self._board, rack, nsamples)
+            .map_err(WordfeudError::from)?;
+        let mut results = Vec::new();
+        for (x, y, horizontal, word, score,  adj_score, played, flag, std_opp_score) in scores {
+            let exit_code = match flag {
+                ExitFlag::None  => 0,
+                ExitFlag::Our => 1,
+                ExitFlag::Opponent => 2,
+            };
+            results.push(ExtScore {
+                x, y, horizontal, word, score, adj_score, played, exit_code, std_opp_score,
+            });
+        }
+        Ok(results)
     }
 }
 
@@ -158,6 +213,15 @@ impl From<WordfeudError> for PyErr {
 impl PyObjectProtocol for Board {
     fn __repr__(&self) -> PyResult<String> {
         Ok(self._board.to_string())
+    }
+}
+
+#[pyproto]
+impl PyObjectProtocol for ExtScore {
+    fn __repr__(&self) -> String {
+        let s = self;
+        format!("{{ x: {}, y: {}, horizontal: {}, word: {}, score: {} adj_score: {} played: {} exit: {} std: {:.1} }}",
+            s.x, s.y, s.horizontal, s.word, s.score, s.adj_score, s.played, s.exit_code, s.std_opp_score)
     }
 }
 

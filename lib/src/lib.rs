@@ -28,10 +28,12 @@
 //! println!("{}", board);
 //! # Ok::<(), Error>(())
 //! ```
+mod ai;
 mod board;
 mod error;
 mod grid;
 mod labelset;
+mod tilebag;
 mod tiles;
 mod tilesets;
 mod wordlist;
@@ -43,4 +45,6 @@ pub use crate::tiles::{
     Cell, Code, Codec, Item, ItemList, Label, Letter, Letters, List, Row, Tile, Word,
 };
 pub use crate::tilesets::Language;
+pub use crate::tilesets::TileSet;
 pub use crate::wordlist::{RowData, Wordlist};
+pub use crate::ai::{find_best_score, Score as BestScore, ExitFlag};

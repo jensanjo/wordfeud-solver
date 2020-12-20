@@ -24,8 +24,8 @@ type TileInfo = (&'static str, u32, u32);
 /// [Wordfeud.com website](https://wordfeud.com/wf/help/)
 #[derive(Debug, Clone)]
 pub struct TileSet<'a> {
-    language: Language,
-    tiles: &'a [TileInfo],
+    pub language: Language,
+    pub tiles: &'a [TileInfo],
     codec: Codec,
 }
 
