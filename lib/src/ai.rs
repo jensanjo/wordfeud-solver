@@ -12,7 +12,7 @@ pub enum ExitFlag {
     Our = 1,
     Opponent = 2,
 }
-/// Returned score information. Extended from [board::Score](board::Score)
+/// Returned score information. Extended from [board::Score](crate::Score)
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[derive(Debug, Clone)]
 pub struct Score {

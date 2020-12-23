@@ -3,7 +3,7 @@ name = "wordfeud-solver"
 description = "A Rust library to evaluate all possible moves given a wordfeud board and rack."
 license = "MIT OR Apache-2.0"
 readme = "../README.md"
-version = "0.2.2"
+version = "0.3.1"
 authors = ["Joep Jansen <joep.w.jansen@gmail.com>"]
 edition = "2018"
 
