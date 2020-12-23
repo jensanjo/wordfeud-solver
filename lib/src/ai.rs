@@ -5,11 +5,35 @@ use crate::{Board, Error, Item, Letter, Letters, TileSet};
 use rand::{rngs::StdRng, seq::IteratorRandom, SeedableRng};
 use std::convert::TryFrom;
 
-#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[derive(Debug, Clone, Copy)]
 pub enum ExitFlag {
-    None,
-    Our,
-    Opponent,
+    None = 0,
+    Our = 1,
+    Opponent = 2,
+}
+/// Returned score information. Extended from [board::Score](board::Score)
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[derive(Debug, Clone)]
+pub struct Score {
+    /// word start x: 0..N
+    pub x: usize,
+    /// word start y: 0..N
+    pub y: usize,
+    /// horizontal if true, else vertical
+    pub horizontal: bool,
+    /// word as String
+    pub word: String,
+    /// score for this word
+    pub score: i32,
+    /// score adjusted for opponent score
+    pub adj_score: i32,
+    /// played letters
+    pub played: String,
+    /// exit flag:
+    pub exit_flag: ExitFlag,
+    /// std deviation of best opponent scores
+    pub std: f32,
 }
 
 pub fn used_tiles(board: &Board, rack: Letters) -> TileBag {
@@ -42,9 +66,6 @@ fn tiles_score(tiles: &Letters, tileset: &TileSet) -> i32 {
         .sum();
     score as i32
 }
-
-/// Returned score information: x, y, horizontal, word, score, adjusted score, played letters, exitflag, opp score std
-pub type Score = (usize, usize, bool, String, i32, i32, String, ExitFlag, f32); // TODO: simplify, put in struct?
 
 /// Find the best moves on a wordfeud board, considering opponent moves.
 ///
@@ -96,7 +117,7 @@ pub fn find_best_scores(
         eprintln!("No words found");
         return Ok(result);
     }
-    words.sort_by(|a, b| b.4.cmp(&a.4));
+    words.sort_by(|a, b| b.score.cmp(&a.score));
     let mut topn = &words[..];
 
     let mut opp_tiles_score: i32 = 0;
@@ -129,9 +150,9 @@ pub fn find_best_scores(
     }
     // println!("samples: {:?}", samples);
     let saved_state = board.horizontal();
-    for (i, &(x, y, horizontal, word, score)) in topn.iter().enumerate() {
-        let letters = board.decode(word);
-        let played = board.play_word(&letters, x, y, horizontal, true)?;
+    for (i, &s) in topn.iter().enumerate() {
+        let letters = board.decode(s.word);
+        let played = board.play_word(&letters, s.x, s.y, s.horizontal, true)?;
         let mut exit_flag = ExitFlag::None;
         let mut opp_scores = Vec::new();
         if in_endgame && played.len() == letters.len() {
@@ -139,7 +160,7 @@ pub fn find_best_scores(
             exit_flag = ExitFlag::Our;
             opp_scores.push(-opp_tiles_score);
         } else {
-            let res = board.sample_scores(&samples, score, false)?;
+            let res = board.sample_scores(&samples, s.score, false)?;
             opp_scores = res.iter().map(|&(score, _)| score as i32).collect();
             if res.iter().any(|&(_, opp_exit)| opp_exit) {
                 exit_flag = ExitFlag::Opponent;
@@ -150,18 +171,18 @@ pub fn find_best_scores(
 
         let mean_opp_score = mean(&opp_scores).unwrap_or(0.0);
         let std_opp_score = std_deviation(&opp_scores).unwrap_or(0.0);
-        let adj_opp_score = score as f32 - mean_opp_score;
-        let res = (
-            x,
-            y,
-            horizontal,
-            board.decode(word),
-            score as i32,
-            adj_opp_score.round() as i32,
+        let adj_opp_score = s.score as f32 - mean_opp_score;
+        let res = Score {
+            x: s.x,
+            y: s.y,
+            horizontal: s.horizontal,
+            word: board.decode(s.word),
+            score: s.score as i32,
+            adj_score: adj_opp_score.round() as i32,
             played,
             exit_flag,
-            std_opp_score,
-        );
+            std: std_opp_score,
+        };
         result.push(res);
     }
 
@@ -301,20 +322,18 @@ mod tests {
         let mut scores = find_best_scores(&mut board, rack, nsamples)?;
         let dt = now.elapsed().as_secs_f32();
         println!("get scores took {:.2}", dt);
-        scores.sort_by(|a, b| b.6.cmp(&a.6));
+        scores.sort_by(|a, b| b.adj_score.cmp(&a.adj_score));
         // scores.sort_by(|a, b|, b.6.cmp(&a.6));
-        for (x, y, horizontal, word, score, adj_score, played, flag, opp_std) in
-            scores.into_iter().take(10)
-        {
+        for s in scores.into_iter().take(10) {
             println!(
                 "{:2} {:2} {:1} {:-7} {:3} {:4} {:-7}",
-                x,
-                y,
-                horizontal as i32,
-                word.to_uppercase(),
-                score,
-                adj_score,
-                played,
+                s.x,
+                s.y,
+                s.horizontal as i32,
+                s.word.to_uppercase(),
+                s.score,
+                s.adj_score,
+                s.played,
             );
         }
         Ok(())

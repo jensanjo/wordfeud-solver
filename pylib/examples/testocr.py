@@ -1,6 +1,6 @@
 import heapq
 import time
-import pywordfeud
+import pywordfeud_solver
 import pywordfeud_ocr
 
 fn = "../wordfeud-ocr/lib/screenshots/screenshot_dutch.png"
@@ -9,7 +9,7 @@ grid = res['board_ocr']
 state = res['state_ocr']
 letters = res['tray_ocr']
 
-board = pywordfeud.Board("NL", wordfile="wordlists/wordlist-nl.txt",
+board = pywordfeud_solver.Board("NL", wordfile="wordlists/wordlist-nl.txt",
         state=state, grid=grid)
 
 t0 = time.time()

@@ -1,15 +1,28 @@
 use pyo3::create_exception;
 use pyo3::{basic::PyObjectProtocol, exceptions::PyException, prelude::*, PyErr};
 use std::convert::From;
-use wordfeud_solver::{Language, ExitFlag};
+use wordfeud_solver::Language;
 
 create_exception!(pywordfeud_solver, WordfeudException, PyException);
 
 /// Score as returned to python: x, y, horizontal, word, score
-type Score = (usize, usize, bool, String, u32);
 
 #[pyclass]
-struct ExtScore {
+struct Score {
+    #[pyo3(get)]
+    x: usize,
+    #[pyo3(get)]
+    y: usize,
+    #[pyo3(get)]
+    horizontal: bool,
+    #[pyo3(get)]
+    word: String,
+    #[pyo3(get)]
+    score: i32,
+}
+
+#[pyclass]
+struct BestScore {
     #[pyo3(get)]
     x: usize,
     #[pyo3(get)]
@@ -25,9 +38,9 @@ struct ExtScore {
     #[pyo3(get)]
     played: String,
     #[pyo3(get)]
-    exit_code: u32,
+    exit_flag: u8,
     #[pyo3(get)]
-    std_opp_score: f32,
+    std: f32,
 }
 
 #[pyclass]
@@ -121,7 +134,13 @@ impl Board {
             .calc_all_word_scores(&letters)
             .map_err(WordfeudError::from)?
             .into_iter()
-            .map(|(x, y, hor, word, score)| (x, y, hor, self._board.decode(word), score))
+            .map(|s| Score {
+                x: s.x,
+                y: s.y,
+                horizontal: s.horizontal,
+                word: self._board.decode(s.word),
+                score: s.score as i32,
+            })
             .collect();
         Ok(scores)
     }
@@ -134,11 +153,17 @@ impl Board {
             ._board
             .calc_all_word_scores(&letters)
             .map_err(WordfeudError::from)?;
-        results.sort_by(|a, b| (b.4).cmp(&a.4));
+        results.sort_by(|a, b| (b.score).cmp(&a.score));
         Ok(results
             .into_iter()
             .take(n)
-            .map(|(x, y, hor, word, score)| (x, y, hor, self._board.decode(word), score))
+            .map(|s| Score {
+                x: s.x,
+                y: s.y,
+                horizontal: s.horizontal,
+                word: self._board.decode(s.word),
+                score: s.score as i32,
+            })
             .collect())
     }
 
@@ -175,21 +200,24 @@ impl Board {
         Ok(result)
     }
 
-    fn find_best_score(&mut self, rack: &str, nsamples: usize) -> PyResult<Vec<ExtScore>> {
+    fn find_best_score(&mut self, rack: &str, nsamples: usize) -> PyResult<Vec<BestScore>> {
         let rack = self._board.encode(rack).map_err(WordfeudError::from)?;
         let scores = wordfeud_solver::find_best_scores(&mut self._board, rack, nsamples)
             .map_err(WordfeudError::from)?;
-        let mut results = Vec::new();
-        for (x, y, horizontal, word, score,  adj_score, played, flag, std_opp_score) in scores {
-            let exit_code = match flag {
-                ExitFlag::None  => 0,
-                ExitFlag::Our => 1,
-                ExitFlag::Opponent => 2,
-            };
-            results.push(ExtScore {
-                x, y, horizontal, word, score, adj_score, played, exit_code, std_opp_score,
-            });
-        }
+        let results: Vec<BestScore> = scores
+            .into_iter()
+            .map(|s| BestScore {
+                x: s.x,
+                y: s.y,
+                horizontal: s.horizontal,
+                word: s.word,
+                score: s.score,
+                adj_score: s.adj_score,
+                played: s.played,
+                exit_flag: s.exit_flag as u8,
+                std: s.std,
+            })
+            .collect();
         Ok(results)
     }
 }
@@ -217,11 +245,22 @@ impl PyObjectProtocol for Board {
 }
 
 #[pyproto]
-impl PyObjectProtocol for ExtScore {
+impl PyObjectProtocol for Score {
+    fn __repr__(&self) -> String {
+        let s = self;
+        format!(
+            "{{ x: {}, y: {}, horizontal: {}, word: {}, score: {} }}",
+            s.x, s.y, s.horizontal, s.word, s.score
+        )
+    }
+}
+
+#[pyproto]
+impl PyObjectProtocol for BestScore {
     fn __repr__(&self) -> String {
         let s = self;
         format!("{{ x: {}, y: {}, horizontal: {}, word: {}, score: {} adj_score: {} played: {} exit: {} std: {:.1} }}",
-            s.x, s.y, s.horizontal, s.word, s.score, s.adj_score, s.played, s.exit_code, s.std_opp_score)
+            s.x, s.y, s.horizontal, s.word, s.score, s.adj_score, s.played, s.exit_flag, s.std)
     }
 }
 

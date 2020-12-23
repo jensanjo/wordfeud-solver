@@ -1,6 +1,6 @@
 import heapq
 import time
-import pywordfeud
+import pywordfeud_solver
 
 state = [
     "    t     c   f",
@@ -20,7 +20,7 @@ state = [
     "   zerk   g    ",
 ]
 
-board = pywordfeud.Board("NL", wordfile="wordlists/wordlist-nl.txt", state=state)
+board = pywordfeud_solver.Board("NL", wordfile="wordlists/wordlist-nl.txt", state=state)
 letters = "mdjenj*"
 t0 = time.time()
 top20 = board.calc_top_scores(letters, 20)

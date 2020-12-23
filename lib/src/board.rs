@@ -16,7 +16,20 @@ use std::fmt;
 const N: usize = 15;
 type State = [Row; N];
 
-type Score = (usize, usize, bool, Word, u32);
+/// Score returned by calc_all_word_scores
+#[derive(Debug, Clone, Copy)]
+pub struct Score {
+    /// word start x: 0..N
+    pub x: usize,
+    /// word start y: 0..N
+    pub y: usize,
+    /// horizontal if true, else vertical
+    pub horizontal: bool,
+    /// word as Tiles
+    pub word: Word,
+    /// score for this word
+    pub score: u32,
+}
 
 /// Display the board state as 15 lines of 15 squares.
 /// Empty squares show as ".".
@@ -555,7 +568,13 @@ impl<'a> Board<'a> {
             let mut scores: Vec<Score> = Vec::new();
             for (x, word) in words {
                 let points = self.calc_word_points_unchecked(&word, x, i, true, true);
-                scores.push((x, i, true, word, points));
+                scores.push(Score {
+                    x,
+                    y: i,
+                    horizontal: true,
+                    word,
+                    score: points,
+                });
             }
             scores
         };
@@ -564,30 +583,16 @@ impl<'a> Board<'a> {
             let mut scores: Vec<Score> = Vec::new();
             for (y, word) in words {
                 let points = self.calc_word_points_unchecked(&word, i, y, false, true);
-                scores.push((i, y, false, word, points));
+                scores.push(Score {
+                    x: i,
+                    y,
+                    horizontal: false,
+                    word,
+                    score: points,
+                });
             }
             scores
         };
-        // #[cfg(feature = "rayon")]
-        #[cfg(feature = "calc_all_word_scores_parallel")]
-        {
-            scores.par_extend(
-                self.horizontal
-                    .into_par_iter()
-                    .enumerate()
-                    .map(hor_scores)
-                    .flatten(),
-            );
-            scores.par_extend(
-                self.vertical
-                    .into_par_iter()
-                    .enumerate()
-                    .map(ver_scores)
-                    .flatten(),
-            );
-        }
-        // #[cfg(not(feature = "rayon"))]
-        #[cfg(not(feature = "calc_all_word_scores_parallel"))]
         {
             scores.extend(self.horizontal.iter().enumerate().map(hor_scores).flatten());
             scores.extend(self.vertical.iter().enumerate().map(ver_scores).flatten());
@@ -641,18 +646,18 @@ impl<'a> Board<'a> {
                 // no possible moves for opponent, return 0
                 return Ok((0, false));
             }
-            result.sort_by(|a, b| (b.4).cmp(&a.4));
-            return Ok((result[0].4, false));
+            result.sort_by(|a, b| (b.score).cmp(&a.score));
+            return Ok((result[0].score, false));
         }
         let mut scores = vec![0];
         let mut exit_flag = false;
-        for (x, y, horizontal, word, score) in result {
-            let played = self.try_word(word, x, y, horizontal)?;
+        for s in result {
+            let played = self.try_word(s.word, s.x, s.y, s.horizontal)?;
             let score = if played.len() == letters.len() {
                 exit_flag = true;
-                score + our_tile_score
+                s.score + our_tile_score
             } else {
-                score
+                s.score
             };
             scores.push(score);
         }
@@ -798,7 +803,7 @@ mod tests {
         // println!("{:?}", res);
         // board.verify_word_scores(&res);
 
-        let expect = [
+        let expect: &[(usize, usize, bool, &str, u32)] = &[
             (13, 0, true, "af", 5),
             (3, 1, true, "be", 5),
             (3, 1, true, "bel", 14),
@@ -809,14 +814,12 @@ mod tests {
         ];
 
         assert_eq!(expect.len(), res.len());
-        for ((rx, ry, rhor, rword, rscore), (ex, ey, ehor, eword, escore)) in
-            res.iter().zip(&expect)
-        {
-            assert_eq!(rx, ex);
-            assert_eq!(ry, ey);
-            assert_eq!(rhor, ehor);
-            assert_eq!(&board.decode(*rword), eword);
-            assert_eq!(rscore, escore);
+        for (&r, &(ex, ey, ehor, eword, escore)) in res.iter().zip(expect) {
+            assert_eq!(r.x, ex);
+            assert_eq!(r.y, ey);
+            assert_eq!(r.horizontal, ehor);
+            assert_eq!(&board.decode(r.word), eword);
+            assert_eq!(r.score, escore);
         }
         Ok(())
     }
@@ -841,15 +844,15 @@ mod tests {
     fn test_main() -> Result<()> {
         let mut board = board_nl().with_wordlist_from_words(&["rust", "rest"])?;
         let letters = "rusta";
-        let results = board.calc_all_word_scores(letters)?;
-        for (x, y, horizontal, word, score) in results {
+        let scores = board.calc_all_word_scores(letters)?;
+        for s in scores {
             println!(
                 "{} {} {} {} {}",
-                x,
-                y,
-                horizontal,
-                board.decode(word),
-                score
+                s.x,
+                s.y,
+                s.horizontal,
+                board.decode(s.word),
+                s.score
             );
         }
         board.play_word("rust", 7, 7, true, true)?;

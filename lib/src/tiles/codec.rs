@@ -18,10 +18,10 @@ const NOCODE: [Option<char>; 2] = [None; 2];
 const ASCII_LC: &str = "abcdefghijklmnopqrstuvwxyz";
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 struct CodeSet {
     encoder: HashMap<String, Code>,
-    decoder: [[Option<char>; 2]; NCODE],
+    decoder: Vec<[Option<char>; 2]>,
 }
 
 impl CodeSet {
@@ -43,7 +43,7 @@ impl CodeSet {
         encoder.insert(String::from("."), EMPTY);
         encoder.insert(String::from("*"), BLANK);
 
-        let mut decoder = [NOCODE; NCODE];
+        let mut decoder = vec![NOCODE; NCODE];
         for (k, &v) in &encoder {
             let mut it = k.chars();
             decoder[v as usize] = [it.next(), it.next()];
@@ -54,7 +54,7 @@ impl CodeSet {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// Translate from string to label codes and vice versa.
 /// Each wordfeud tile is translated to a code.
 /// - 0: No tile (empty square)

@@ -21,8 +21,8 @@
 //! let mut board = Board::default().with_wordlist_from_words(&["rust", "rest"])?;
 //! let results = board.calc_all_word_scores("rusta")?;
 //! assert_eq!(results.len(),8);
-//! for (x,y,horizontal,word,score) in results {
-//!        println!("{} {} {} {} {}", x, y, horizontal, board.decode(word), score);
+//! for s in results {
+//!        println!("{} {} {} {} {}", s.x, s.y, s.horizontal, board.decode(s.word), s.score);
 //!}
 //! board.play_word("rust", 7, 7, true, true)?;
 //! println!("{}", board);
@@ -38,8 +38,8 @@ mod tiles;
 mod tilesets;
 mod wordlist;
 
-pub use crate::ai::{find_best_scores, ExitFlag, Score as BestScore};
-pub use crate::board::Board;
+pub use crate::ai::{find_best_scores, Score as BestScore};
+pub use crate::board::{Board, Score};
 pub use crate::error::Error;
 pub use crate::grid::Grid;
 pub use crate::tiles::{

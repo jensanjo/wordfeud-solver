@@ -44,15 +44,15 @@ fn run() -> Result<()> {
             dt
         );
         // find the best 20 results
-        results.sort_by(|a, b| (b.4).cmp(&a.4));
-        for (x, y, hor, word, score) in results.into_iter().take(20) {
+        results.sort_by(|a, b| (b.score).cmp(&a.score));
+        for s in results.into_iter().take(20) {
             println!(
                 "({}, {}, {}, \"{}\", {}",
-                x,
-                y,
-                hor,
-                board.decode(word),
-                score
+                s.x,
+                s.y,
+                s.horizontal,
+                board.decode(s.word),
+                s.score
             );
         }
     }

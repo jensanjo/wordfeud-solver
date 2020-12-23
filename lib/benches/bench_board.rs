@@ -31,7 +31,7 @@ fn bench_calc_all_word_scores(c: &mut Criterion, name: &str, letters: &str) {
     c.bench_function(&format!("board.{}", name), |b| {
         b.iter(|| {
             let mut results = board.calc_all_word_scores(letters).unwrap();
-            results.sort_by(|a, b| (b.4).cmp(&a.4));
+            results.sort_by(|a, b| (b.score).cmp(&a.score));
         })
     });
 }

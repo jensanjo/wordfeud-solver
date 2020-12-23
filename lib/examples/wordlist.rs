@@ -1,7 +1,7 @@
 use std::io::Result;
 use wordfeud_solver::{Codec, Wordlist};
 
-#[cfg(feature = "serde")]
+#[cfg(feature = "bincode")]
 fn serialize_wordlist(wordlist: Wordlist) -> Result<()> {
     use std::fs::File;
     use std::io::prelude::*;
@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     let wordfile = "../wordlists/wordlist-nl.txt";
     let wordlist = Wordlist::from_file(wordfile, &Codec::default()).unwrap();
     println!("{}", wordlist);
-    #[cfg(feature = "serde")]
+    #[cfg(feature = "bincode")]
     serialize_wordlist(wordlist)?;
     Ok(())
 }

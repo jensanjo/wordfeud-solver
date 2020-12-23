@@ -164,7 +164,7 @@ impl Wordlist {
         Ok(wordlist)
     }
 
-    #[cfg(feature = "serde")]
+    #[cfg(feature = "bincode")]
     /// Deserialize the wordlist from a bincoded file.
     /// ## Errors
     /// - If the wordlist can not be read.
@@ -172,8 +172,10 @@ impl Wordlist {
     pub fn deserialize_from(wordfile: &str) -> Result<Wordlist, Error> {
         use std::fs::File;
         use std::io::BufReader;
-        let file =
-            File::open(wordfile).map_err(|_| Error::WordfileReadError(String::from(wordfile)))?;
+        let file = File::open(wordfile).map_err(|source| Error::ReadError {
+            path: String::from(wordfile),
+            source,
+        })?;
         let reader = BufReader::new(file);
         let mut wordlist: Wordlist = bincode::deserialize_from(reader)
             .map_err(|_| Error::WordfileDeserializeError(String::from(wordfile)))?;
