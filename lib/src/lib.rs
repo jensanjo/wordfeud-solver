@@ -38,6 +38,7 @@ mod tiles;
 mod tilesets;
 mod wordlist;
 
+pub use crate::ai::{find_best_score, ExitFlag, Score as BestScore};
 pub use crate::board::Board;
 pub use crate::error::Error;
 pub use crate::grid::Grid;
@@ -47,4 +48,3 @@ pub use crate::tiles::{
 pub use crate::tilesets::Language;
 pub use crate::tilesets::TileSet;
 pub use crate::wordlist::{RowData, Wordlist};
-pub use crate::ai::{find_best_score, Score as BestScore, ExitFlag};

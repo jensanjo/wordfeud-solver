@@ -44,17 +44,7 @@ fn tiles_score(tiles: &Letters, tileset: &TileSet) -> i32 {
 }
 
 /// Returned score information: x, y, horizontal, word, score, adjusted score, played letters, exitflag, opp score std
-pub type Score = (
-    usize,
-    usize,
-    bool,
-    String,
-    i32,
-    i32,
-    String,
-    ExitFlag,
-    f32,
-); // TODO: simplify, put in struct?
+pub type Score = (usize, usize, bool, String, i32, i32, String, ExitFlag, f32); // TODO: simplify, put in struct?
 
 pub fn find_best_score(
     board: &mut Board,

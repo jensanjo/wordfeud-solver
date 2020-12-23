@@ -98,6 +98,12 @@ impl<'a> Board<'a> {
         }
     }
 
+    /// Set the wordlist for the board.
+    pub fn set_wordlist(&mut self, wordlist: Wordlist) {
+        self.wordlist = wordlist;
+        self.set_rowdata();
+    }
+
     /// Specify the wordlist by reading it from `wordfile`, and returns the modified board.
     ///
     /// The `wordfile` must contain one word per line, and the words should be from language
@@ -112,8 +118,7 @@ impl<'a> Board<'a> {
     /// # Ok::<(), Error>(())
     /// ```
     pub fn with_wordlist_from_file(mut self, wordfile: &str) -> Result<Board<'a>, Error> {
-        self.wordlist = Wordlist::from_file(wordfile, self.codec())?;
-        self.set_rowdata();
+        self.set_wordlist(Wordlist::from_file(wordfile, self.codec())?);
         Ok(self)
     }
 
@@ -126,8 +131,7 @@ impl<'a> Board<'a> {
     /// let board = Board::default().with_wordlist_from_words(&["aardvark", "zebra"]);
     ///```
     pub fn with_wordlist_from_words(mut self, words: &[&str]) -> Result<Board<'a>, Error> {
-        self.wordlist = Wordlist::from_words(words, self.codec())?;
-        self.set_rowdata();
+        self.set_wordlist(Wordlist::from_words(words, self.codec())?);
         Ok(self)
     }
 
@@ -139,8 +143,7 @@ impl<'a> Board<'a> {
     /// ## Errors
     /// This function will give an error if the `wordfile` does not exist, or cannot be decoded.
     pub fn with_wordlist_deserialize_from(mut self, wordfile: &str) -> Result<Board<'a>, Error> {
-        self.wordlist = Wordlist::deserialize_from(wordfile)?;
-        self.set_rowdata();
+        self.set_wordlist(Wordlist::deserialize_from(wordfile)?);
         Ok(self)
     }
 
@@ -171,15 +174,18 @@ impl<'a> Board<'a> {
     /// ];
     /// let board = Board::default().with_state_from_strings(state);
     /// ```
-    pub fn state_from_strings(&mut self, rows: &[&str]) -> Result<State, Error> {
+    pub fn state_from_strings<S: AsRef<str>>(&mut self, rows: &[S]) -> Result<State, Error> {
         if rows.len() != N {
             return Err(Error::InvalidRowCount(rows.len()));
         }
         let mut state = [Row::new(); N];
-        for (i, &row) in rows.iter().enumerate() {
-            let encoded = self.wordlist.encode(row)?;
+        for (i, row) in rows.iter().enumerate() {
+            let encoded = self.wordlist.encode(row.as_ref())?;
             if encoded.len() != N {
-                return Err(Error::InvalidRowLength(String::from(row), encoded.len()));
+                return Err(Error::InvalidRowLength(
+                    String::from(row.as_ref()),
+                    encoded.len(),
+                ));
             }
             state[i] = encoded;
         }
@@ -187,14 +193,17 @@ impl<'a> Board<'a> {
     }
 
     /// Set board state from list of strings
-    pub fn set_state_from_strings(&mut self, rows: &[&str]) -> Result<(), Error> {
-        let state = self.state_from_strings(rows)?;
+    pub fn set_state_from_strings<S: AsRef<str>>(&mut self, rows: &[S]) -> Result<(), Error> {
+        let state = self.state_from_strings(rows.as_ref())?;
         self.set_state(&state);
         Ok(())
     }
 
     /// Set board state from list of strings
-    pub fn with_state_from_strings(mut self, rows: &[&str]) -> Result<Board<'a>, Error> {
+    pub fn with_state_from_strings<S: AsRef<str>>(
+        mut self,
+        rows: &[S],
+    ) -> Result<Board<'a>, Error> {
         self.set_state_from_strings(rows)?;
         Ok(self)
     }
@@ -855,7 +864,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_sample_scores() -> Result<()> {
-        let mut board = board_nl()
+        let board = board_nl()
             .with_wordlist_from_file("../wordlists/wordlist-nl.txt")?
             .with_state_from_strings(&TEST_STATE)?;
         // let letters = "ehkmopp";
