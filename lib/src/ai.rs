@@ -31,7 +31,7 @@ pub fn used_tiles(board: &Board, rack: Letters) -> TileBag {
     TileBag::from_tiles(&used_tiles)
 }
 
-fn get_remaining_tiles(full_bag: &TileBag, board: &Board, rack: Letters) -> TileBag {
+fn remaining_tiles(full_bag: &TileBag, board: &Board, rack: Letters) -> TileBag {
     full_bag.clone() - used_tiles(board, rack)
 }
 
@@ -46,7 +46,33 @@ fn tiles_score(tiles: &Letters, tileset: &TileSet) -> i32 {
 /// Returned score information: x, y, horizontal, word, score, adjusted score, played letters, exitflag, opp score std
 pub type Score = (usize, usize, bool, String, i32, i32, String, ExitFlag, f32); // TODO: simplify, put in struct?
 
-pub fn find_best_score(
+/// Find the best moves on a wordfeud board, considering opponent moves.
+///
+/// First, calculate the scores with our letters with [calc_all_word_scores](Board::calc_all_word_scores).
+/// Then we adjust the scores by evaluating possible opponent moves with the remaining letters, as explained below.
+///
+/// ## MIDGAME: tiles left in bag
+///
+/// For each of the 20 best words:
+/// - Play the word on the board.
+/// - For each of `nsamples` randow draws of 7 tiles from the remaining tiles:
+///     - Calculate all word scores for the opponent.
+///     - Add the best score to a list of opponent tiles score
+/// - Calculate the mean opponent score. Subtract it from our score
+///
+/// ## ENDGAME: no tiles left in bag
+///
+/// For each of our words:
+/// - Play the word on the board.
+///     - CASE 1:
+///         - If we can exit: value = our score + opponents tile score
+///     - CASE 2:
+///         - Calculate all word scores for the opponent.
+///         - If opponent can exit: value = our word - (opponents word + our tiles score)
+///     - CASE 3:
+///         - No one can exit. value = our word - oppenents max score
+
+pub fn find_best_scores(
     board: &mut Board,
     rack: Letters,
     nsamples: usize,
@@ -55,21 +81,17 @@ pub fn find_best_score(
     let mut rng = StdRng::seed_from_u64(123); // seeded to get reproducible results. TODO make global?
                                               // let mut rng =  thread_rng();
     let full_bag = TileBag::from_tileset(board.tileset());
-    let remaining = get_remaining_tiles(&full_bag, board, rack);
+    let remaining = remaining_tiles(&full_bag, board, rack);
     let mut tiles: Vec<u8> = remaining.iter().cloned().collect(); // remaining tiles as Vec<Code>
     tiles.sort_unstable();
-    // let sample = board.decode(Letters::try_from(tiles)?); // remaining tiles as string
-    // eprintln!("remaining tiles \"{:?}\"", tiles);
-
-    let letters = board.decode(rack);
     eprintln!(
         "Find best score with \"{}\", {} letters left",
-        letters,
+        board.decode(rack),
         remaining.len()
     );
 
     // calculate word scores for our letters
-    let mut words = board.calc_all_word_scores(&letters)?;
+    let mut words = board.calc_all_word_scores(rack)?;
     if words.is_empty() {
         eprintln!("No words found");
         return Ok(result);
@@ -82,10 +104,10 @@ pub fn find_best_score(
 
     // In endgame the opponent letters are known, calculate all possible opponent moves.
     // Otherwise, prepare a bunch of random samples from remaining letters and calculate best opponent moves with each
-    let samples: Vec<String>;
+    let samples: Vec<Letters>;
     if in_endgame {
         // one sample
-        let sample = board.decode(Letters::try_from(tiles)?); // remaining tiles as string
+        let sample = Letters::try_from(tiles)?; // remaining tiles
         samples = vec![sample];
         opp_tiles_score = tiles_score(&rack, board.tileset());
         println!("In endgame, found {} words", words.len());
@@ -100,8 +122,7 @@ pub fn find_best_score(
                     .into_iter()
                     .cloned()
                     .collect();
-                let letters = Letters::try_from(v).unwrap();
-                board.decode(letters)
+                Letters::try_from(v).unwrap()
             })
             .collect();
         topn = &words[0..20];
@@ -110,7 +131,6 @@ pub fn find_best_score(
     let saved_state = board.horizontal();
     for (i, &(x, y, horizontal, word, score)) in topn.iter().enumerate() {
         let letters = board.decode(word);
-        // eprintln!("{} {}", i, letters);
         let played = board.play_word(&letters, x, y, horizontal, true)?;
         let mut exit_flag = ExitFlag::None;
         let mut opp_scores = Vec::new();
@@ -221,7 +241,7 @@ mod tests {
         );
         let used = used_tiles(&board, rack_tiles);
         println!("full bag: {} used: {}", bag.len(), used.len());
-        let remaining = get_remaining_tiles(&bag, &board, rack_tiles);
+        let remaining = remaining_tiles(&bag, &board, rack_tiles);
         println!("remaining: {} {:?}", remaining.len(), remaining);
         for (code, (tag, _, _)) in board.tileset().tiles.iter().enumerate() {
             let code = code as u8;
@@ -278,7 +298,7 @@ mod tests {
         let rack = board.encode("bmekqev")?;
         let nsamples = 50;
         let now = Instant::now();
-        let mut scores = find_best_score(&mut board, rack, nsamples)?;
+        let mut scores = find_best_scores(&mut board, rack, nsamples)?;
         let dt = now.elapsed().as_secs_f32();
         println!("get scores took {:.2}", dt);
         scores.sort_by(|a, b| b.6.cmp(&a.6));

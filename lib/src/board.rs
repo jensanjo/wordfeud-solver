@@ -2,6 +2,7 @@ use crate::grid::{
     Cell::{LetterBonus, WordBonus},
     Grid,
 };
+use crate::tiles::TryIntoLetters;
 use crate::tilesets::{Language, TileSet};
 use crate::wordlist::{LetterSet, RowData, Wordlist};
 use crate::{Cell, Codec, Error, Item, ItemList, Letter, Letters, List, Row, Tile, Word};
@@ -147,7 +148,37 @@ impl<'a> Board<'a> {
         Ok(self)
     }
 
-    /// Parse board state from a list of strings.
+    /// Parse board state from list of string-like.
+    ///
+    /// ## See also:
+    /// * [set_state_from_strings](Self::set_state_from_strings)
+    /// * [with_state_from_strings](Self::with_state_from_strings)
+    pub fn state_from_strings<S: AsRef<str>>(&mut self, rows: &[S]) -> Result<State, Error> {
+        if rows.len() != N {
+            return Err(Error::InvalidRowCount(rows.len()));
+        }
+        let mut state = [Row::new(); N];
+        for (i, row) in rows.iter().enumerate() {
+            let encoded = self.wordlist.encode(row.as_ref())?;
+            if encoded.len() != N {
+                return Err(Error::InvalidRowLength(
+                    String::from(row.as_ref()),
+                    encoded.len(),
+                ));
+            }
+            state[i] = encoded;
+        }
+        Ok(state)
+    }
+
+    /// Set board state from list of string-like. Mutates board.
+    pub fn set_state_from_strings<S: AsRef<str>>(&mut self, rows: &[S]) -> Result<(), Error> {
+        let state = self.state_from_strings(rows.as_ref())?;
+        self.set_state(&state);
+        Ok(())
+    }
+
+    /// Parse board state from a list of string-like.
     /// The list must contain 15 rows of 15 characters.
     /// ## Errors
     /// If the list of strings has wrong dimensions or cannot be parsed as rows.
@@ -174,32 +205,6 @@ impl<'a> Board<'a> {
     /// ];
     /// let board = Board::default().with_state_from_strings(state);
     /// ```
-    pub fn state_from_strings<S: AsRef<str>>(&mut self, rows: &[S]) -> Result<State, Error> {
-        if rows.len() != N {
-            return Err(Error::InvalidRowCount(rows.len()));
-        }
-        let mut state = [Row::new(); N];
-        for (i, row) in rows.iter().enumerate() {
-            let encoded = self.wordlist.encode(row.as_ref())?;
-            if encoded.len() != N {
-                return Err(Error::InvalidRowLength(
-                    String::from(row.as_ref()),
-                    encoded.len(),
-                ));
-            }
-            state[i] = encoded;
-        }
-        Ok(state)
-    }
-
-    /// Set board state from list of strings
-    pub fn set_state_from_strings<S: AsRef<str>>(&mut self, rows: &[S]) -> Result<(), Error> {
-        let state = self.state_from_strings(rows.as_ref())?;
-        self.set_state(&state);
-        Ok(())
-    }
-
-    /// Set board state from list of strings
     pub fn with_state_from_strings<S: AsRef<str>>(
         mut self,
         rows: &[S],
@@ -208,7 +213,7 @@ impl<'a> Board<'a> {
         Ok(self)
     }
 
-    /// Set board state from a list of rows, update rowdata
+    /// Set board state from a list of rows.
     pub fn set_state(&mut self, rows: &State) {
         self.horizontal = *rows;
         for i in 0..N {
@@ -341,7 +346,7 @@ impl<'a> Board<'a> {
         Ok(self.decode(used_letters))
     }
 
-    pub fn play_word_unchecked(&mut self, word: Word, x: usize, y: usize, horizontal: bool) {
+    fn play_word_unchecked(&mut self, word: Word, x: usize, y: usize, horizontal: bool) {
         let mut x = x;
         let mut y = y;
         let (dx, dy) = if horizontal { (1, 0) } else { (0, 1) };
@@ -538,9 +543,12 @@ impl<'a> Board<'a> {
     /// ```
     /// In this example 16 results are returned: 8 in horizontal and 8 in vertical direction.
     /// See also [`Board::words`](Board::words).
-    #[cfg_attr(feature = "flame_it", flame)]
-    pub fn calc_all_word_scores(&self, letters: &str) -> Result<Vec<Score>, Error> {
-        let letters = self.encode(letters)?;
+    pub fn calc_all_word_scores<T: TryIntoLetters>(&self, letters: T) -> Result<Vec<Score>, Error> {
+        let letters = letters.try_into_letters(&self.codec())?;
+        self.calc_all_word_scores_inner(letters)
+    }
+
+    fn calc_all_word_scores_inner(&self, letters: Letters) -> Result<Vec<Score>, Error> {
         let mut scores: Vec<Score> = Vec::new();
         let hor_scores = |(i, row)| {
             let words = self.words(row, true, i, letters);
@@ -623,7 +631,7 @@ impl<'a> Board<'a> {
     /// Returns an error if [calc_all_word_scores](Self::calc_all_word_scores) fails.
     fn evaluate_opponent_scores(
         &self,
-        letters: &str,
+        letters: Letters,
         our_tile_score: u32,
         in_endgame: bool,
     ) -> Result<(u32, bool), Error> {
@@ -657,27 +665,31 @@ impl<'a> Board<'a> {
     #[cfg(not(feature = "rayon"))]
     pub fn sample_scores(
         &mut self,
-        racks: &[String],
+        racks: &[Letters],
         our_tile_score: u32,
         in_endgame: bool,
     ) -> Result<Vec<(u32, bool)>, Error> {
         let opp_scores = racks
             .iter()
-            .map(|letters| self.evaluate_opponent_scores(&letters, our_tile_score, in_endgame))
+            .map(|letters| self.evaluate_opponent_scores(letters, our_tile_score, in_endgame))
             .collect::<Result<Vec<_>, Error>>();
         opp_scores
     }
 
     #[cfg(feature = "rayon")]
-    pub fn sample_scores(
+    pub fn sample_scores<T: TryIntoLetters + Copy>(
         &self,
-        racks: &[String],
+        racks: &[T],
         our_tile_score: u32,
         in_endgame: bool,
     ) -> Result<Vec<(u32, bool)>, Error> {
+        let racks: Vec<Letters> = racks
+            .iter()
+            .map(|&rack| rack.try_into_letters(self.codec()))
+            .collect::<Result<Vec<_>, _>>()?;
         let opp_scores = racks
             .par_iter()
-            .map(|letters| self.evaluate_opponent_scores(&letters, our_tile_score, in_endgame))
+            .map(|&letters| self.evaluate_opponent_scores(letters, our_tile_score, in_endgame))
             .collect::<Result<Vec<_>, Error>>();
         opp_scores
     }
@@ -869,13 +881,13 @@ mod tests {
             .with_state_from_strings(&TEST_STATE)?;
         // let letters = "ehkmopp";
         // board.play_word("hoppe", 7,7, true, true)?;
-        let racks: Vec<String> = [
+        let racks: Vec<Letters> = [
             "ddenuvw", "eeijkvy", "abeinuy", "ceeehtv", "*bjjoov", "bbeeotu", "eghknrt", "ddnosuw",
             "aaadeln", "abeinnz", "aceeiin", "deilnoz", "eeeimmo", "eefioou", "aefnnnt", "*ejlmrr",
             "addeent", "adgimno", "emprstt", "bceekpy",
         ]
         .iter()
-        .map(|&s| String::from(s))
+        .map(|&s| board.encode(s).unwrap())
         .collect();
 
         let now = Instant::now();

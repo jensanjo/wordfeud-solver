@@ -164,7 +164,7 @@ impl Board {
     #[text_signature = "($self, racks, our_tile_score, in_endgame)"]
     fn sample_scores(
         &mut self,
-        racks: Vec<String>,
+        racks: Vec<&str>,
         our_tile_score: u32,
         in_endgame: bool,
     ) -> PyResult<Vec<(u32, bool)>> {
@@ -177,7 +177,7 @@ impl Board {
 
     fn find_best_score(&mut self, rack: &str, nsamples: usize) -> PyResult<Vec<ExtScore>> {
         let rack = self._board.encode(rack).map_err(WordfeudError::from)?;
-        let scores = wordfeud_solver::find_best_score(&mut self._board, rack, nsamples)
+        let scores = wordfeud_solver::find_best_scores(&mut self._board, rack, nsamples)
             .map_err(WordfeudError::from)?;
         let mut results = Vec::new();
         for (x, y, horizontal, word, score,  adj_score, played, flag, std_opp_score) in scores {

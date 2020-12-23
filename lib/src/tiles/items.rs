@@ -1,4 +1,6 @@
-use super::{list::ItemList, list::Items, Cell, Letter, List, Tile};
+use super::{list::ItemList, list::Items, Cell, Codec, Letter, List, Tile};
+use crate::error::Error;
+use std::convert::TryFrom;
 
 /// A collection of [`Tile`](crate::Tile).
 pub type Word = ItemList<Tile>;
@@ -21,8 +23,34 @@ impl Letters {
         w.0.remove(pos);
         w
     }
+}
 
-    // pub fn contains
+/// A trait for things that can be converted to Letters by a Codec
+pub trait TryIntoLetters {
+    fn try_into_letters(self, codec: &Codec) -> Result<Letters, Error>;
+}
+
+/// Convert &str to letters
+impl TryIntoLetters for &str {
+    fn try_into_letters(self, codec: &Codec) -> Result<Letters, Error> {
+        let inner = codec.encode(self)?;
+        Letters::try_from(inner)
+    }
+}
+
+/// Convert &String to letters
+impl TryIntoLetters for &String {
+    fn try_into_letters(self, codec: &Codec) -> Result<Letters, Error> {
+        let inner = codec.encode(self)?;
+        Letters::try_from(inner)
+    }
+}
+
+/// Infallible conversion for Self
+impl TryIntoLetters for Letters {
+    fn try_into_letters(self, _: &Codec) -> Result<Letters, Error> {
+        Ok(self)
+    }
 }
 
 impl Row {

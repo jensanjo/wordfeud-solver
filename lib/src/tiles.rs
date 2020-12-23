@@ -14,7 +14,7 @@ pub use cell::Cell;
 pub use codec::Codec;
 pub use codes::{Code, Label, BLANK, EMPTY};
 pub use item::Item;
-pub use items::{Letters, Row, Word};
+pub use items::{Letters, Row, TryIntoLetters, Word};
 pub use letter::Letter;
 pub use list::{ItemList, List};
 pub use tile::Tile;
