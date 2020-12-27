@@ -1,3 +1,7 @@
+#![doc(
+    html_logo_url = "https://github.com/jensanjo/wordfeud-solver/raw/master/images/logo.png",
+    html_favicon_url = "https://github.com/jensanjo/wordfeud-solver/raw/master/images/logo.png"
+)]
 //! A wordfeud library for Rust.
 //! <br>
 //! This crate allows you to calculate the best scores in a game of wordfeud.
