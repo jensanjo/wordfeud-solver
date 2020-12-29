@@ -1,9 +1,9 @@
 #![allow(dead_code, unused_variables, unused_mut, unused_assignments)]
 use crate::tilebag::TileBag;
 use crate::tiles::BLANK;
-use crate::{Board, Error, Item, Letter, Letters, TileSet};
-use rand::{rngs::StdRng, seq::IteratorRandom, SeedableRng};
-use std::convert::TryFrom;
+use crate::{Board, Code, Error, Item, Letter, Letters, TileSet};
+use rand::{rngs::StdRng, seq::IteratorRandom, Rng, SeedableRng};
+use std::convert::{From, TryFrom};
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[derive(Debug, Clone, Copy)]
@@ -52,7 +52,7 @@ pub fn used_tiles(board: &Board, rack: Letters) -> TileBag {
         })
         .collect();
     used_tiles.extend(rack.into_iter().map(|letter: Letter| letter.code()));
-    TileBag::from_tiles(&used_tiles)
+    TileBag::from(&used_tiles)
 }
 
 fn remaining_tiles(full_bag: &TileBag, board: &Board, rack: Letters) -> TileBag {
@@ -65,6 +65,15 @@ fn tiles_score(tiles: &Letters, tileset: &TileSet) -> i32 {
         .map(|letter| tileset.points(letter.code()))
         .sum();
     score as i32
+}
+
+fn draw_random_tiles<R: Rng>(tiles: &[Code], n: usize, mut rng: &mut R) -> Vec<Code> {
+    tiles
+        .iter()
+        .choose_multiple(&mut rng, n)
+        .into_iter()
+        .cloned()
+        .collect()
 }
 
 /// Find the best moves on a wordfeud board, considering opponent moves.
@@ -92,29 +101,27 @@ fn tiles_score(tiles: &Letters, tileset: &TileSet) -> i32 {
 ///         - If opponent can exit: value = our word - (opponents word + our tiles score)
 ///     - CASE 3:
 ///         - No one can exit. value = our word - oppenents max score
-
+///
+/// # Errors
+/// Returns [Error](crate::Error) when:
+/// * calculate scores from our letters fails (see [calc_all_word_scores](crate::Board::calc_all_word_scores))
+/// * one of our words can not be played on the board (see [play_word](crate::Board::play_word))
+/// * sample opponent scores fails (see [sample_scores](crate::Board::sample_scores))
 pub fn find_best_scores(
     board: &mut Board,
     rack: Letters,
     nsamples: usize,
 ) -> Result<Vec<Score>, Error> {
     let mut result = Vec::new();
-    let mut rng = StdRng::seed_from_u64(123); // seeded to get reproducible results. TODO make global?
-                                              // let mut rng =  thread_rng();
-    let full_bag = TileBag::from_tileset(board.tileset());
+    let mut rng = StdRng::seed_from_u64(123); // seeded to get reproducible results.
+    let full_bag = TileBag::from(board.tileset());
     let remaining = remaining_tiles(&full_bag, board, rack);
     let mut tiles: Vec<u8> = remaining.iter().cloned().collect(); // remaining tiles as Vec<Code>
     tiles.sort_unstable();
-    eprintln!(
-        "Find best score with \"{}\", {} letters left",
-        board.decode(rack),
-        remaining.len()
-    );
 
     // calculate word scores for our letters
     let mut words = board.calc_all_word_scores(rack)?;
     if words.is_empty() {
-        eprintln!("No words found");
         return Ok(result);
     }
     words.sort_by(|a, b| b.score.cmp(&a.score));
@@ -132,24 +139,17 @@ pub fn find_best_scores(
         samples = vec![sample];
         opp_tiles_score = tiles_score(&rack, board.tileset());
         top_n = words.len(); // evaluate all our possible words in endgame
-        println!("In endgame, found {} words", words.len());
     } else {
         // random samples from remaining letters
         samples = (0..nsamples)
             .into_iter()
             .map(|_| {
-                let v: Vec<u8> = tiles
-                    .iter()
-                    .choose_multiple(&mut rng, 7)
-                    .into_iter()
-                    .cloned()
-                    .collect();
+                let v = draw_random_tiles(&tiles, 7, &mut rng);
                 Letters::try_from(v).unwrap()
             })
             .collect();
         top_n = 20; // evaluate up to 20 of our best words
     }
-    // println!("samples: {:?}", samples);
     let saved_state = board.horizontal();
     for (i, &s) in words.iter().take(top_n).enumerate() {
         let letters = board.decode(s.word);
@@ -168,7 +168,7 @@ pub fn find_best_scores(
             }
         }
 
-        board.set_state(&saved_state); // restore board TODO we could save the complete board state, avoid recalculation
+        board.set_state(&saved_state); // restore board before next iteration
 
         let mean_opp_score = mean(&opp_scores).unwrap_or(0.0);
         let std_opp_score = std_deviation(&opp_scores).unwrap_or(0.0);
@@ -190,6 +190,7 @@ pub fn find_best_scores(
     Ok(result)
 }
 
+/// From [rust cookbook](https://rust-lang-nursery.github.io/rust-cookbook/science/mathematics/statistics.html)
 fn mean(data: &[i32]) -> Option<f32> {
     let sum = data.iter().sum::<i32>() as f32;
     let count = data.len();
@@ -200,6 +201,7 @@ fn mean(data: &[i32]) -> Option<f32> {
     }
 }
 
+/// From [rust cookbook](https://rust-lang-nursery.github.io/rust-cookbook/science/mathematics/statistics.html)
 fn std_deviation(data: &[i32]) -> Option<f32> {
     match (mean(data), data.len()) {
         (Some(data_mean), count) if count > 0 => {
@@ -250,7 +252,7 @@ mod tests {
         let board = Board::new(Language::NL)
             .with_state_from_strings(TEST_STATE)
             .unwrap();
-        let bag = TileBag::from_tileset(board.tileset());
+        let bag = TileBag::from(board.tileset());
         let rack = "mndceng";
         let rack_tiles: Letters = board.encode(rack)?;
         println!(
