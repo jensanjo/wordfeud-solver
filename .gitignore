@@ -2,7 +2,8 @@
 lib/target
 Cargo.lock
 TODO.md
-wordlists/wordlist-nl.txt
+wordlists/wordlist-nl.*
 pylib/wordlists
 venv*/
 pylib/target/.rustc_info.json
+*.out*

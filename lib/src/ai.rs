@@ -118,7 +118,6 @@ pub fn find_best_scores(
         return Ok(result);
     }
     words.sort_by(|a, b| b.score.cmp(&a.score));
-    let mut topn = &words[..];
 
     let mut opp_tiles_score: i32 = 0;
     let in_endgame = remaining.len() < 7;
@@ -126,11 +125,13 @@ pub fn find_best_scores(
     // In endgame the opponent letters are known, calculate all possible opponent moves.
     // Otherwise, prepare a bunch of random samples from remaining letters and calculate best opponent moves with each
     let samples: Vec<Letters>;
+    let top_n; // number of our best scores to evaluate: all in endgame, otherwise 20
     if in_endgame {
         // one sample
         let sample = Letters::try_from(tiles)?; // remaining tiles
         samples = vec![sample];
         opp_tiles_score = tiles_score(&rack, board.tileset());
+        top_n = words.len(); // evaluate all our possible words in endgame
         println!("In endgame, found {} words", words.len());
     } else {
         // random samples from remaining letters
@@ -146,11 +147,11 @@ pub fn find_best_scores(
                 Letters::try_from(v).unwrap()
             })
             .collect();
-        topn = &words[0..20];
+        top_n = 20; // evaluate up to 20 of our best words
     }
     // println!("samples: {:?}", samples);
     let saved_state = board.horizontal();
-    for (i, &s) in topn.iter().enumerate() {
+    for (i, &s) in words.iter().take(top_n).enumerate() {
         let letters = board.decode(s.word);
         let played = board.play_word(&letters, s.x, s.y, s.horizontal, true)?;
         let mut exit_flag = ExitFlag::None;
@@ -220,10 +221,8 @@ fn std_deviation(data: &[i32]) -> Option<f32> {
 
 #[cfg(test)]
 mod tests {
-    // use std::collections::HashMap;
     use crate::Board;
     use anyhow::Result;
-    use std::time::Instant;
 
     use super::*;
     use crate::Language;
@@ -277,63 +276,6 @@ mod tests {
             assert_eq!(
                 bag.count_of(&code),
                 used.count_of(&code) + remaining.count_of(&code)
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_random_sample() -> Result<()> {
-        use rand::seq::IteratorRandom;
-        use std::convert::TryFrom;
-
-        let mut rng = rand::thread_rng();
-        let board = Board::new(Language::NL);
-        let bag = TileBag::from_tileset(board.tileset());
-        let tiles: Vec<u8> = bag.iter().cloned().collect();
-        println!("{:?}", tiles);
-        let samples: Vec<u8> = tiles.into_iter().choose_multiple(&mut rng, 7);
-        let letters = Letters::try_from(samples)?;
-        println!("{:?}", board.decode(letters));
-        Ok(())
-    }
-
-    #[test]
-    fn test_tiles() -> Result<()> {
-        let board = Board::default();
-        let tiles: Vec<u8> = vec![5, 1, 1, 9, 14, 14, 14, 18, 19, 24, 20, 20, 64, 64];
-        let sample = board.decode(Letters::try_from(tiles)?);
-        println!("{}", sample);
-        Ok(())
-    }
-
-    #[test]
-    #[ignore] // slow test, only run when requested
-    fn test_find_best_score() -> Result<()> {
-        eprintln!("find_best_score");
-        let wordfile = "../wordlists/wordlist-nl.txt";
-        // let now = Instant::now();
-        let mut board = Board::new(Language::NL)
-            .with_wordlist_from_file(wordfile)?
-            .with_state_from_strings(TEST_STATE)?;
-        let rack = board.encode("bmekqev")?;
-        let nsamples = 50;
-        let now = Instant::now();
-        let mut scores = find_best_scores(&mut board, rack, nsamples)?;
-        let dt = now.elapsed().as_secs_f32();
-        println!("get scores took {:.2}", dt);
-        scores.sort_by(|a, b| b.adj_score.cmp(&a.adj_score));
-        // scores.sort_by(|a, b|, b.6.cmp(&a.6));
-        for s in scores.into_iter().take(10) {
-            println!(
-                "{:2} {:2} {:1} {:-7} {:3} {:4} {:-7}",
-                s.x,
-                s.y,
-                s.horizontal as i32,
-                s.word.to_uppercase(),
-                s.score,
-                s.adj_score,
-                s.played,
             );
         }
         Ok(())
