@@ -289,7 +289,7 @@ impl<'a> Board<'a> {
     /// assert!(board.is_occupied(7,7));
     /// # Ok::<(), Error>(())
     pub fn is_occupied(&self, x: usize, y: usize) -> bool {
-        if (x < N) && (y < N) {
+        if x < N && y < N {
             self.vertical[x][y].tile().is_some()
         } else {
             false
@@ -321,6 +321,15 @@ impl<'a> Board<'a> {
         for i in 0..N {
             self.rowdata[0][i] = self.calc_rowdata(false, i);
             self.rowdata[1][i] = self.calc_rowdata(true, i);
+        }
+    }
+
+    /// Return rowdata for selected direction (horizontal or vertical) and index (0..14)
+    pub fn rowdata(&self, horizontal: bool) -> impl Iterator<Item = &RowData> {
+        if horizontal {
+            self.rowdata[1].iter()
+        } else {
+            self.rowdata[0].iter()
         }
     }
 
@@ -608,7 +617,7 @@ impl<'a> Board<'a> {
         None
     }
 
-    fn codec(&self) -> &Codec {
+    pub fn codec(&self) -> &Codec {
         &self.tileset.codec()
     }
 
@@ -667,21 +676,22 @@ impl<'a> Board<'a> {
     }
 
     /// calculate word scores for a list of racks
-    #[cfg(not(feature = "rayon"))]
-    pub fn sample_scores(
-        &mut self,
-        racks: &[Letters],
-        our_tile_score: u32,
-        in_endgame: bool,
-    ) -> Result<Vec<(u32, bool)>, Error> {
-        let opp_scores = racks
-            .iter()
-            .map(|letters| self.evaluate_opponent_scores(letters, our_tile_score, in_endgame))
-            .collect::<Result<Vec<_>, Error>>();
-        opp_scores
-    }
+    // #[cfg(not(feature = "rayon"))]
+    // pub fn sample_scores<T: TryIntoLetters + Copy>(
+    //     &self,
+    //     racks: &[T],
+    //     our_tile_score: u32,
+    //     in_endgame: bool,
+    // ) -> Result<Vec<(u32, bool)>, Error> {
+    //     let opp_scores = racks
+    //         .iter()
+    //         .copied()
+    //         .map(|letters| self.evaluate_opponent_scores(letters, our_tile_score, in_endgame))
+    //         .collect::<Result<Vec<_>, Error>>();
+    //     opp_scores
+    // }
 
-    #[cfg(feature = "rayon")]
+    /// calculate word scores for a list of racks
     pub fn sample_scores<T: TryIntoLetters + Copy>(
         &self,
         racks: &[T],
@@ -692,11 +702,19 @@ impl<'a> Board<'a> {
             .iter()
             .map(|&rack| rack.try_into_letters(self.codec()))
             .collect::<Result<Vec<_>, _>>()?;
-        let opp_scores = racks
-            .par_iter()
+
+        let iter_racks;
+        #[cfg(not(feature = "rayon"))]
+        {
+            iter_racks = racks.iter();
+        }
+        #[cfg(feature = "rayon")]
+        {
+            iter_racks = racks.par_iter();
+        }
+        iter_racks
             .map(|&letters| self.evaluate_opponent_scores(letters, our_tile_score, in_endgame))
-            .collect::<Result<Vec<_>, Error>>();
-        opp_scores
+            .collect::<Result<Vec<_>, Error>>()
     }
 }
 
