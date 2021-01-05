@@ -119,7 +119,7 @@ impl<'a> Matches<'a> {
 }
 
 impl Wordlist {
-    /// Return a list of matching words. TODO.
+    /// Return a list of matching words.
     pub fn matches<'a>(
         &'a self,
         node: usize,
@@ -140,6 +140,36 @@ impl Wordlist {
         Matches::new(self, row, rowdata, args)
     }
 
+    /// Returns the indices in `row` where a word can start, given the connection data in `rowdata`.
+    /// `maxdist` is the maximum distance for connecting, typically the number of letters we have.
+    pub fn start_indices(&self, row: Row, rowdata: &RowData, maxdist: usize) -> Vec<usize> {
+        // For each cell in row, calculate the distance to the nearest connection point.
+        // A distance of DIM (16) indicates that the cell can not be a starting point.
+        // A word can not start in the cell next to a letter.
+        let mut d = DIM;
+        let mut dist: [usize; DIM] = [DIM; DIM];
+        for i in (0..rowdata.len()).rev() {
+            if !row[i].is_empty() {
+                // the distance is 0 if there is a tile in the cell
+                d = 0;
+            } else if rowdata[i].1 {
+                // if the cell is connected we need 1 letter
+                d = 1;
+            }
+            dist[i] = if i > 0 && !row[i - 1].is_empty() {
+                DIM
+            } else {
+                d
+            };
+            d += 1;
+        }
+        // return the indices where dist <= maxdist
+        dist.iter()
+            .enumerate()
+            .filter_map(|(i, d)| if *d <= maxdist { Some(i) } else { None })
+            .collect()
+    }
+
     pub fn words<'a>(
         &'a self,
         row: &'a Row,
@@ -149,25 +179,9 @@ impl Wordlist {
     ) -> impl Iterator<Item = (usize, Word)> + 'a {
         let mut row = *row;
         row.push(Cell::EMPTY); // extend row with an empty square
-
-        // calculate possible start locations in row
         let maxdist = maxdist.unwrap_or_else(|| letters.len());
-        let mut indices = Vec::new();
-        for pos in 0..row.len() {
-            if pos > 0 && !row[pos - 1].is_empty() {
-                continue;
-            }
-            // find next connected
-            let dist = rowdata[pos..]
-                .iter()
-                .position(|(_, connected)| *connected)
-                .unwrap_or(DIM);
-            if dist > maxdist {
-                continue;
-            }
-            indices.push(pos);
-        }
-
+        let indices = self.start_indices(row, rowdata, maxdist);
+        // println!("i {:?}", indices);
         indices.into_iter().flat_map(move |pos| {
             self.matches(0, row, rowdata, pos, &letters)
                 .map(move |word| (pos, word))
@@ -319,5 +333,18 @@ mod test {
         let word: Word = Word::try_from(codes)?;
         assert_eq!(wordlist.decode(word), "abefhilorst");
         Ok(())
+    }
+
+    #[test]
+    fn test_start_indices() {
+        use crate::wordlist::LetterSet;
+
+        let row: Row =
+            Row::try_from(vec![0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 0, 0, 0]).unwrap();
+        let rowdata: RowData = (0..DIM).map(|i| (LetterSet::new(), i == 12)).collect();
+        let wordlist = Wordlist::from_words(WORDS, &Codec::default()).unwrap();
+        let indices = wordlist.start_indices(row, &rowdata, 7);
+        assert_eq!(indices, vec![5, 6, 7, 8, 9, 10, 11, 12]);
+        println!("{:?}", indices);
     }
 }
