@@ -23,7 +23,6 @@ const STATE: &[&str] = &[
 fn run() -> Result<()> {
     eprintln!("find_best_score");
     let wordfile = "../wordlists/wordlist-nl.txt";
-    // let now = Instant::now();
     let mut board = Board::new(Language::NL)
         .with_wordlist_from_file(wordfile)?
         .with_state_from_strings(STATE)?;
@@ -32,9 +31,10 @@ fn run() -> Result<()> {
     let now = Instant::now();
     let mut scores = find_best_scores(&mut board, rack, nsamples)?;
     let dt = now.elapsed().as_secs_f32();
-    println!("get scores took {:.2} s", dt);
+    eprintln!("get scores took {:.2} s", dt);
+
     scores.sort_by(|a, b| b.adj_score.cmp(&a.adj_score));
-    // scores.sort_by(|a, b|, b.6.cmp(&a.6));
+
     for s in scores.into_iter().take(10) {
         println!(
             "{:2} {:2} {:1} {:-7} {:3} {:4} {:-7}",
