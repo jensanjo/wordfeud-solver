@@ -7,3 +7,4 @@ pylib/wordlists
 venv*/
 pylib/target/.rustc_info.json
 *.out*
+wordlists/wordlist-en-sowpods.txt
