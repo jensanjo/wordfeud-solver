@@ -44,7 +44,7 @@ fn run() -> Result<()> {
             dt
         );
         // find the best 20 results
-        results.sort_by(|a, b| (b.score).cmp(&a.score));
+        results.sort_by_key(|item| std::cmp::Reverse(item.score));
         for s in results.into_iter().take(20) {
             println!(
                 "({}, {}, {}, \"{}\", {}",

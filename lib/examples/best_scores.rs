@@ -33,7 +33,7 @@ fn run() -> Result<()> {
     let dt = now.elapsed().as_secs_f32();
     eprintln!("get scores took {:.2} s", dt);
 
-    scores.sort_by(|a, b| b.adj_score.cmp(&a.adj_score));
+    scores.sort_by_key(|item| std::cmp::Reverse(item.adj_score));
 
     for s in scores.into_iter().take(10) {
         println!(
