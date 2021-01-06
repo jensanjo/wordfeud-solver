@@ -137,7 +137,7 @@ impl FromIterator<u8> for LabelSet {
 
 impl From<Vec<u8>> for LabelSet {
     fn from(v: Vec<u8>) -> Self {
-        LabelSet::from_iter(v.into_iter())
+        v.into_iter().collect()
     }
 }
 
