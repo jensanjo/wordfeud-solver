@@ -2,6 +2,21 @@
     html_logo_url = "https://github.com/jensanjo/wordfeud-solver/raw/master/images/logo.png",
     html_favicon_url = "https://github.com/jensanjo/wordfeud-solver/raw/master/images/logo.png"
 )]
+#![deny(clippy::wrong_pub_self_convention, clippy::used_underscore_binding,
+//    clippy::pub_enum_variant_names,
+//    clippy::missing_docs_in_private_items,
+//    clippy::non_ascii_literal, clippy::unicode_not_nfc,
+//    clippy::unwrap_used, 
+   clippy::map_unwrap_or,
+//    clippy::filter_map,
+//    clippy::shadow_unrelated, clippy::shadow_reuse, clippy::shadow_same,
+   clippy::int_plus_one, clippy::string_add_assign, clippy::if_not_else,
+   clippy::invalid_upcast_comparisons,
+//    clippy::cast_precision_loss, clippy::cast_lossless,
+//    clippy::cast_possible_wrap, clippy::cast_possible_truncation,
+   clippy::mutex_integer, clippy::mut_mut, clippy::items_after_statements,
+   clippy::print_stdout, clippy::mem_forget, clippy::maybe_infinite_iter)]
+
 //! A wordfeud library for Rust.
 //! <br>
 //! This crate allows you to calculate the best scores in a game of wordfeud.
