@@ -153,7 +153,7 @@ impl Board {
             ._board
             .calc_all_word_scores(&letters)
             .map_err(WordfeudError::from)?;
-        results.sort_by(|a, b| (b.score).cmp(&a.score));
+        results.sort_by_key(|item| std::cmp::Reverse(item.score));
         Ok(results
             .into_iter()
             .take(n)

@@ -124,7 +124,7 @@ pub fn find_best_scores(
     if words.is_empty() {
         return Ok(result);
     }
-    words.sort_by(|a, b| b.score.cmp(&a.score));
+    words.sort_by_key(|item| std::cmp::Reverse(item.score));
 
     let mut opp_tiles_score: i32 = 0;
     let in_endgame = remaining.len() < 7;

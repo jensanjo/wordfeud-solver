@@ -11,6 +11,7 @@ use crate::{Cell, Codec, Error, Item, ItemList, Letter, Letters, List, Row, Tile
 use flamer::flame;
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
+use std::cmp::Reverse;
 use std::fmt;
 
 const N: usize = 15;
@@ -300,21 +301,12 @@ impl<'a> Board<'a> {
         let sw = self.surrounding_words(horizontal, i);
         let labelsets = sw
             .iter()
-            .map(|surrounding| self.wordlist.get_legal_characters(surrounding))
-            .collect::<Vec<_>>();
-        let mut connected = sw
+            .map(|surrounding| self.wordlist.get_legal_characters(surrounding));
+        let connected = sw
             .iter()
-            .map(|surrounding| !surrounding.is_empty_cell())
-            .collect::<Vec<_>>();
-        if i == 7 {
-            connected[7] = true;
-        }
-        let rowdata: RowData = labelsets
-            .iter()
-            .zip(connected)
-            .map(|(&l, c)| (l, c))
-            .collect();
-        rowdata
+            .enumerate()
+            .map(|(j, surrounding)| (i, j) == (7, 7) || !surrounding.is_empty_cell());
+        labelsets.zip(connected).collect()
     }
 
     fn set_rowdata(&mut self) {
@@ -655,7 +647,7 @@ impl<'a> Board<'a> {
                 // no possible moves for opponent, return 0
                 return Ok((0, false));
             }
-            result.sort_by(|a, b| (b.score).cmp(&a.score));
+            result.sort_by_key(|&item| Reverse(item.score));
             return Ok((result[0].score, false));
         }
         let mut scores = vec![0];
@@ -670,7 +662,7 @@ impl<'a> Board<'a> {
             };
             scores.push(score);
         }
-        scores.sort_by_key(|n| u32::MAX - n);
+        scores.sort_by_key(|&n| Reverse(n));
 
         Ok((scores[0], exit_flag))
     }
