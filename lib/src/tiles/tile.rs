@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 use std::num::NonZeroU8;
 
 /// A tile on the board, either a regular letter or a wildcard (blank used as letter)
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Tile(pub(super) NonZeroU8);
 
 impl Default for Tile {

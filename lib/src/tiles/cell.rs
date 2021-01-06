@@ -7,7 +7,7 @@ use crate::error::Error;
 use std::convert::TryFrom;
 
 /// A cell on the board that is either empty or contains a [`Tile`](crate::Tile)
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
 pub struct Cell(Option<Tile>);
 
 impl Item for Cell {

@@ -7,7 +7,7 @@ use std::num::NonZeroU8;
 /// A letter that can be used as [`Tile`](crate::Tile) on the board.
 ///
 /// Either a regular letter or a `blank` ("*") that can be used as any letter.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Letter(pub(super) NonZeroU8);
 
 impl Default for Letter {
