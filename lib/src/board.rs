@@ -668,22 +668,6 @@ impl<'a> Board<'a> {
     }
 
     /// calculate word scores for a list of racks
-    // #[cfg(not(feature = "rayon"))]
-    // pub fn sample_scores<T: TryIntoLetters + Copy>(
-    //     &self,
-    //     racks: &[T],
-    //     our_tile_score: u32,
-    //     in_endgame: bool,
-    // ) -> Result<Vec<(u32, bool)>, Error> {
-    //     let opp_scores = racks
-    //         .iter()
-    //         .copied()
-    //         .map(|letters| self.evaluate_opponent_scores(letters, our_tile_score, in_endgame))
-    //         .collect::<Result<Vec<_>, Error>>();
-    //     opp_scores
-    // }
-
-    /// calculate word scores for a list of racks
     pub fn sample_scores<T: TryIntoLetters + Copy>(
         &self,
         racks: &[T],
@@ -706,7 +690,7 @@ impl<'a> Board<'a> {
         }
         iter_racks
             .map(|&letters| self.evaluate_opponent_scores(letters, our_tile_score, in_endgame))
-            .collect::<Result<Vec<_>, Error>>()
+            .collect::<Result<Vec<_>, _>>()
     }
 }
 
