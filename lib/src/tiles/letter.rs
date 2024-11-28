@@ -29,8 +29,13 @@ impl Letter {
     }
 
     /// Create `Letter` from `Tile`
+    /// Returns: letter or BLANK
     pub fn from_tile(tile: Tile) -> Letter {
-        Letter::new(tile.label())
+        if tile.is_wildcard() {
+            Letter::blank()
+        } else {
+            Letter::new(tile.label())
+        }
     }
 
     /// Return new blank

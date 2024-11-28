@@ -1,23 +1,41 @@
 use anyhow::Result;
 use std::time::Instant;
-use wordfeud_solver::{find_best_scores, Board, Language};
+use wordfeud_solver::{find_best_scores, remaining_tiles, Board, TileBag, Language};
 
 const STATE: &[&str] = &[
-    "........gezoend",
-    ".........xi...i",
-    ".....grif.jap.e",
-    ".......dauw...v",
-    "....her...I...E",
-    ".....rennen.e.n",
-    "..........d.i..",
-    ".......hesjes..",
-    "......yen.e.e..",
-    ".....bof.......",
-    "kolkte.turns...",
-    ".......e.......",
-    ".......n.......",
-    "...............",
-    "...............",
+    "..............d",
+    "..............r",
+    ".........v....a",
+    "........co.gauw",
+    ".......pol.r...",
+    "......fa.snIb..",
+    ".....kapo..j...",
+    "....zakten.s...",
+    "...wel.ere..t.y",
+    "..heek..si.me.e",
+    "client..a.mexen",
+    "...t.e..a...e..",
+    ".bijen.gierend.",
+    ".u.eh.does...u.",
+    ".s.....dr..doft",    
+];
+
+const GRID: &[&str] = &[
+    "-- -- 2l -- -- -- 2w -- 2w 2w -- -- -- 2l --",
+    "-- 2w -- -- 3l -- 2l -- -- -- -- 2l -- 2l --",
+    "-- -- 2l -- 3l -- -- -- -- -- -- -- -- -- --",
+    "-- -- -- -- -- -- -- -- -- -- -- -- -- -- --",
+    "-- -- -- -- -- -- -- -- -- -- 3l -- -- -- --",
+    "-- 3w 2l -- -- -- -- -- -- -- -- -- -- -- --",
+    "-- 2w -- -- 3l -- -- -- -- 3l -- -- -- -- --",
+    "-- 3l -- -- -- -- -- ss -- -- -- -- -- -- 2w",
+    "-- -- -- -- -- -- -- -- -- -- -- 3l -- -- --",
+    "3l -- -- -- -- -- -- -- -- -- -- -- -- -- --",
+    "-- -- -- -- -- -- -- -- -- -- -- -- -- -- --",
+    "3w 3l -- -- -- -- -- -- -- -- -- -- -- -- 2w",
+    "-- -- -- -- -- -- -- -- -- -- -- -- -- -- 2l",
+    "-- -- -- -- -- -- -- -- -- -- -- -- -- -- --",
+    "-- -- 2l -- 3l -- -- -- -- -- -- -- -- -- --",      
 ];
 
 fn run() -> Result<()> {
@@ -25,8 +43,14 @@ fn run() -> Result<()> {
     let wordfile = "../wordlists/wordlist-nl.txt";
     let mut board = Board::new(Language::NL)
         .with_wordlist_from_file(wordfile)?
+        .with_grid_from_strings(GRID)?
         .with_state_from_strings(STATE)?;
-    let rack = board.encode("bmekqev")?;
+
+    let rack = board.encode("gnnnoqz")?;
+    // let rack = board.encode("mnnv*")?;
+    let full_bag = TileBag::from(board.tileset());
+    let remaining = remaining_tiles(&full_bag, &board, rack);
+    eprintln!("Remaining tiles: {:?}", remaining);
     let nsamples = 50;
     let now = Instant::now();
     let mut scores = find_best_scores(&mut board, rack, nsamples)?;
@@ -35,7 +59,7 @@ fn run() -> Result<()> {
 
     scores.sort_by_key(|item| std::cmp::Reverse(item.adj_score));
 
-    for s in scores.into_iter().take(10) {
+    for s in scores.into_iter().take(20) {
         println!(
             "{:2} {:2} {:1} {:-7} {:3} {:4} {:-7}",
             s.x,

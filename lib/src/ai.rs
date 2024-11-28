@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_variables, unused_mut, unused_assignments)]
 use crate::tilebag::TileBag;
 use crate::tiles::BLANK;
-use crate::{Board, Code, Error, Item, Letter, Letters, TileSet};
+use crate::{Board, Code, Error, Item, Letter, Letters, TileSet, List};
 use rand::{rngs::StdRng, seq::IteratorRandom, Rng, SeedableRng};
 use std::convert::{From, TryFrom};
 
@@ -28,12 +28,16 @@ pub struct Score {
     pub score: i32,
     /// score adjusted for opponent score
     pub adj_score: i32,
-    /// played letters
-    pub played: String,
-    /// exit flag:
-    pub exit_flag: ExitFlag,
+    /// mean opponent score
+    pub opp_score: i32,
     /// std deviation of best opponent scores
-    pub std: f32,
+    pub opp_std: f32,
+    /// played letters from rack
+    pub played: String,
+    /// exit flag
+    pub exit_flag: ExitFlag,
+    /// difference in expected opponent move value caused by our move
+    pub opp_score_diff: i32,
 }
 
 pub fn used_tiles(board: &Board, rack: Letters) -> TileBag {
@@ -55,7 +59,7 @@ pub fn used_tiles(board: &Board, rack: Letters) -> TileBag {
     TileBag::from(&used_tiles)
 }
 
-fn remaining_tiles(full_bag: &TileBag, board: &Board, rack: Letters) -> TileBag {
+pub fn remaining_tiles(full_bag: &TileBag, board: &Board, rack: Letters) -> TileBag {
     full_bag.clone() - used_tiles(board, rack)
 }
 
@@ -127,7 +131,7 @@ pub fn find_best_scores(
     words.sort_by_key(|item| std::cmp::Reverse(item.score));
 
     let mut opp_tiles_score: i32 = 0;
-    let in_endgame = remaining.len() < 7;
+    let in_endgame = remaining.len() <= 7;
 
     // In endgame the opponent letters are known, calculate all possible opponent moves.
     // Otherwise, prepare a bunch of random samples from remaining letters and calculate best opponent moves with each
@@ -137,8 +141,9 @@ pub fn find_best_scores(
         // one sample
         let sample = Letters::try_from(tiles)?; // remaining tiles
         samples = vec![sample];
-        opp_tiles_score = tiles_score(&rack, board.tileset());
+        opp_tiles_score = tiles_score(&sample, board.tileset());
         top_n = words.len(); // evaluate all our possible words in endgame
+        println!("in endgame, top_n: {}, remaining: {:?}, opp tiles score {}", top_n, board.decode(sample), opp_tiles_score);
     } else {
         // random samples from remaining letters
         samples = (0..nsamples)
@@ -150,13 +155,20 @@ pub fn find_best_scores(
             .collect();
         top_n = 20; // evaluate up to 20 of our best words
     }
+    // what is the expected opponent value if we pass or swap?
+    let no_move_opp_scores: Vec<_> = board.sample_scores(&samples, 0, false)?
+        .iter().map(|&(score,_)| score as i32).collect();
+    let no_move_mean_opp_score = mean(&no_move_opp_scores).unwrap_or(0.0);
+    // println!("no_move_mean_opp_score: {:.1}", no_move_mean_opp_score);
+
     let saved_state = board.horizontal();
     for (i, &s) in words.iter().take(top_n).enumerate() {
         let letters = board.decode(s.word);
         let played = board.play_word(&letters, s.x, s.y, s.horizontal, true)?;
         let mut exit_flag = ExitFlag::None;
         let mut opp_scores = Vec::new();
-        if in_endgame && played.len() == letters.len() {
+        if in_endgame && played.len() == rack.len() {
+            // we have a winning move, and opponent tiles value will be added to our score
             // TODO CHECK if this works for non-ascii or multichar tiles
             exit_flag = ExitFlag::Our;
             opp_scores.push(-opp_tiles_score);
@@ -170,7 +182,7 @@ pub fn find_best_scores(
 
         board.set_state(&saved_state); // restore board before next iteration
 
-        let mean_opp_score = mean(&opp_scores).unwrap_or(0.0);
+        let mean_opp_score = mean(&opp_scores).unwrap_or(0.0); // 0 if no moves for opponent
         let std_opp_score = std_deviation(&opp_scores).unwrap_or(0.0);
         let adj_opp_score = s.score as f32 - mean_opp_score;
         let res = Score {
@@ -180,9 +192,11 @@ pub fn find_best_scores(
             word: board.decode(s.word),
             score: s.score as i32,
             adj_score: adj_opp_score.round() as i32,
+            opp_score: mean_opp_score.round() as i32,
+            opp_std: std_opp_score,
             played,
             exit_flag,
-            std: std_opp_score,
+            opp_score_diff: (no_move_mean_opp_score - mean_opp_score).round() as i32,
         };
         result.push(res);
     }

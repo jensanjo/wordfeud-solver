@@ -36,11 +36,15 @@ struct BestScore {
     #[pyo3(get)]
     adj_score: i32,
     #[pyo3(get)]
+    opp_score: i32,
+    #[pyo3(get)]
+    opp_std: f32,
+    #[pyo3(get)]
     played: String,
     #[pyo3(get)]
     exit_flag: u8,
     #[pyo3(get)]
-    std: f32,
+    opp_score_diff: i32,
 }
 
 #[pyclass]
@@ -200,7 +204,7 @@ impl Board {
         Ok(result)
     }
 
-    fn find_best_score(&mut self, rack: &str, nsamples: usize) -> PyResult<Vec<BestScore>> {
+    fn find_best_scores(&mut self, rack: &str, nsamples: usize) -> PyResult<Vec<BestScore>> {
         let rack = self._board.encode(rack).map_err(WordfeudError::from)?;
         let scores = wordfeud_solver::find_best_scores(&mut self._board, rack, nsamples)
             .map_err(WordfeudError::from)?;
@@ -213,9 +217,12 @@ impl Board {
                 word: s.word,
                 score: s.score,
                 adj_score: s.adj_score,
+                opp_score: s.opp_score,
+                opp_std: s.opp_std,
                 played: s.played,
                 exit_flag: s.exit_flag as u8,
-                std: s.std,
+                opp_score_diff: s.opp_score_diff,
+        
             })
             .collect();
         Ok(results)
@@ -259,8 +266,8 @@ impl PyObjectProtocol for Score {
 impl PyObjectProtocol for BestScore {
     fn __repr__(&self) -> String {
         let s = self;
-        format!("{{ x: {}, y: {}, horizontal: {}, word: {}, score: {} adj_score: {} played: {} exit: {} std: {:.1} }}",
-            s.x, s.y, s.horizontal, s.word, s.score, s.adj_score, s.played, s.exit_flag, s.std)
+        format!("{{ x: {}, y: {}, horizontal: {}, word: {}, score: {} adj_score: {} opp_score: {} opp_std: {:.1} opp_score_diff: {} played: \"{}\" exit: {}}}",
+            s.x, s.y, s.horizontal, s.word, s.score, s.adj_score, s.opp_score, s.opp_std, s.opp_score_diff, s.played, s.exit_flag)
     }
 }
 

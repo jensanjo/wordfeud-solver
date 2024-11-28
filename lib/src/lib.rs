@@ -57,7 +57,7 @@ mod tiles;
 mod tilesets;
 mod wordlist;
 
-pub use crate::ai::{find_best_scores, Score as BestScore};
+pub use crate::ai::{find_best_scores, remaining_tiles, Score as BestScore};
 pub use crate::board::{Board, Score};
 pub use crate::error::Error;
 pub use crate::grid::Grid;
@@ -66,4 +66,5 @@ pub use crate::tiles::{
 };
 pub use crate::tilesets::Language;
 pub use crate::tilesets::TileSet;
+pub use crate::tilebag::TileBag;
 pub use crate::wordlist::{RowData, Wordlist};
