@@ -9,7 +9,8 @@ use std::collections::VecDeque;
 /// An ordered tree to manage a set of keys. It can answer whether it contains a given key or not.
 ///
 /// Keys are any values that can be converted to a slice of alphabets (type `T`).
-pub trait Trie<T> {
+#[allow(dead_code)]
+trait Trie<T> {
     /// Returns `true` if the trie contains `key`.
     fn has<K: AsRef<[T]>>(&self, key: K) -> bool;
 }

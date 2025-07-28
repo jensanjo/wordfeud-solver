@@ -59,7 +59,6 @@ impl<'a> Default for Board<'a> {
 #[derive(Debug, Clone)]
 pub struct Board<'a> {
     board: Grid,
-    empty_row: Row,
     horizontal: State,
     vertical: State,
     rowdata: [[RowData; N]; 2],
@@ -104,7 +103,6 @@ impl<'a> Board<'a> {
 
         Board {
             board: grid,
-            empty_row,
             horizontal: [empty_row; N],
             vertical: [empty_row; N],
             rowdata: [[empty_rowdata; N], [empty_rowdata; N]],

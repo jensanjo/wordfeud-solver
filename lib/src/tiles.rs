@@ -12,7 +12,7 @@ mod tile;
 pub(super) const DIM: usize = 16;
 pub use cell::Cell;
 pub use codec::Codec;
-pub use codes::{Code, Label, BLANK, EMPTY};
+pub use codes::{Code, Label, BLANK};
 pub use item::Item;
 pub use items::{Letters, Row, TryIntoLetters, Word};
 pub use letter::Letter;

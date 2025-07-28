@@ -3,7 +3,7 @@ mod trievec;
 
 use self::trievec::TrieVec;
 use crate::labelset::{Label, LabelSet};
-pub use crate::tiles::{Item, ItemList, List, Row, Word};
+pub use crate::tiles::{Item, ItemList, List, Row};
 use crate::Codec;
 use crate::Error;
 #[cfg(feature = "serde")]
@@ -249,6 +249,7 @@ impl Wordlist {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::tiles::Word;
 
     const WORDS: &[&str] = &[
         "af", "ah", "al", "aar", "aas", "bi", "bo", "bar", "bes", "bel", "belt",

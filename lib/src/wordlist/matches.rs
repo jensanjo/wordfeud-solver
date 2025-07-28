@@ -127,7 +127,7 @@ impl Wordlist {
         rowdata: &'a RowData,
         pos: usize,
         letters: &Letters,
-    ) -> Matches {
+    ) -> Matches<'a> {
         let args = Args {
             node,
             pos,
